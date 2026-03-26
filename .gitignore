@@ -1,0 +1,20 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+
+frontend/node_modules/
+frontend/dist/
+
+backend/bin/
+
+.DS_Store
+
+.idea
+.vscode/
+
+# pnpm store
+.pnpm-store/
+*/.pnpm-store/
