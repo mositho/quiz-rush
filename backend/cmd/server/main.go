@@ -13,13 +13,13 @@ import (
 )
 
 func main() {
-	_ = godotenv.Load()
+	loadBackendEnv()
 
 	ctx := context.Background()
 
 	pool, err := db.NewPool(ctx)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer pool.Close()
 
@@ -30,8 +30,14 @@ func main() {
 
 	router := api.NewRouter(pool)
 
-	log.Printf("backend running on :%s", port)
+	log.Printf("Backend running on :%s", port)
 	if err := http.ListenAndServe(":"+port, router); err != nil {
-		log.Fatalf("server error: %v", err)
+		log.Fatalf("Server error: %v", err)
+	}
+}
+
+func loadBackendEnv() {
+	if err := godotenv.Load("backend/.env"); err != nil {
+		log.Fatalf("Missing backend/.env: %v", err)
 	}
 }
