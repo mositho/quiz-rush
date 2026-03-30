@@ -4,9 +4,9 @@
     <form>
       <h2>login</h2>
       <label for="username">Username:</label>
-      <input type="text" id="username" name="username" v-model="username" />
+      <input id="username" type="text" name="username" v-model="username" />
       <label for="password">Password:</label>
-      <input type="password" id="password" name="password" v-model="password" />
+      <input id="password" type="password" name="password" v-model="password" />
     </form>
     <button type="button" @click="Login">Login</button>
     <button type="button" @click="Register">Register</button>
@@ -14,6 +14,8 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable no-undef */
+
 import { ref } from "vue"
 
 const username = ref("")
