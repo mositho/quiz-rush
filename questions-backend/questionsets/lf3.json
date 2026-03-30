@@ -1,0 +1,327 @@
+{
+    "id": "lf3",
+    "name": "LF3",
+    "description": "Questions about the learning field 3 in the curriculum.",
+    "questions": [
+        {
+            "id": "lf3_q1",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist die Aufgabe der CPU?",
+            "options": [
+                "A) Zentraleinheit zur Ausfuehrung von Befehlen. Fuehrt Berechnungen durch und steuert andere Komponenten.",
+                "B) HDD: Mechanische Festplatte (langsamer, guenstiger). SSD: Flash-Speicher (schneller, teurer, stossfester).",
+                "C) Non-Volatile Memory Express. Schnelles Protokoll fuer SSDs ueber PCIe (bis zu 7000 MB/s).",
+                "D) SATA: Max. 600 MB/s. NVMe: Bis zu 7000 MB/s ueber PCIe."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf3_q2",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist der Unterschied zwischen HDD und SSD?",
+            "options": [
+                "A) Non-Volatile Memory Express. Schnelles Protokoll fuer SSDs ueber PCIe (bis zu 7000 MB/s).",
+                "B) HDD: Mechanische Festplatte (langsamer, guenstiger). SSD: Flash-Speicher (schneller, teurer, stossfester).",
+                "C) SATA: Max. 600 MB/s. NVMe: Bis zu 7000 MB/s ueber PCIe.",
+                "D) Arbeitsspeicher fuer laufende Programme. Fluechtiger Speicher (Daten weg bei Stromausfall)."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf3_q3",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist NVMe?",
+            "options": [
+                "A) Arbeitsspeicher fuer laufende Programme. Fluechtiger Speicher (Daten weg bei Stromausfall).",
+                "B) SATA: Max. 600 MB/s. NVMe: Bis zu 7000 MB/s ueber PCIe.",
+                "C) Non-Volatile Memory Express. Schnelles Protokoll fuer SSDs ueber PCIe (bis zu 7000 MB/s).",
+                "D) DDR5 ist schneller (4800-8400 MT/s), effizienter, hoehere Kapazitaet."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf3_q4",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist der Unterschied zwischen SATA und NVMe?",
+            "options": [
+                "A) Grafikprozessor. Berechnet Bilddaten. Integriert (in CPU) oder dediziert (separate Karte).",
+                "B) Arbeitsspeicher fuer laufende Programme. Fluechtiger Speicher (Daten weg bei Stromausfall).",
+                "C) DDR5 ist schneller (4800-8400 MT/s), effizienter, hoehere Kapazitaet.",
+                "D) SATA: Max. 600 MB/s. NVMe: Bis zu 7000 MB/s ueber PCIe."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf3_q5",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist RAM?",
+            "options": [
+                "A) Arbeitsspeicher fuer laufende Programme. Fluechtiger Speicher (Daten weg bei Stromausfall).",
+                "B) DDR5 ist schneller (4800-8400 MT/s), effizienter, hoehere Kapazitaet.",
+                "C) Grafikprozessor. Berechnet Bilddaten. Integriert (in CPU) oder dediziert (separate Karte).",
+                "D) Hauptplatine die alle Komponenten verbindet (CPU, RAM, Storage, Peripherie)."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf3_q6",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist der Unterschied zwischen DDR4 und DDR5?",
+            "options": [
+                "A) Grafikprozessor. Berechnet Bilddaten. Integriert (in CPU) oder dediziert (separate Karte).",
+                "B) DDR5 ist schneller (4800-8400 MT/s), effizienter, hoehere Kapazitaet.",
+                "C) Hauptplatine die alle Komponenten verbindet (CPU, RAM, Storage, Peripherie).",
+                "D) ATX (305×244 mm), Micro-ATX (244×244 mm), Mini-ITX (170×170 mm)."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf3_q7",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist eine GPU?",
+            "options": [
+                "A) ATX (305×244 mm), Micro-ATX (244×244 mm), Mini-ITX (170×170 mm).",
+                "B) Hauptplatine die alle Komponenten verbindet (CPU, RAM, Storage, Peripherie).",
+                "C) Grafikprozessor. Berechnet Bilddaten. Integriert (in CPU) oder dediziert (separate Karte).",
+                "D) Wandelt Wechselstrom zu Gleichstrom. Versorgung aller Komponenten mit Strom."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf3_q8",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist das Mainboard?",
+            "options": [
+                "A) Unterbrechungsfreie Stromversorgung. Schuetzt vor Stromausfaellen und Spannungsspitzen.",
+                "B) ATX (305×244 mm), Micro-ATX (244×244 mm), Mini-ITX (170×170 mm).",
+                "C) Wandelt Wechselstrom zu Gleichstrom. Versorgung aller Komponenten mit Strom.",
+                "D) Hauptplatine die alle Komponenten verbindet (CPU, RAM, Storage, Peripherie)."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf3_q9",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was sind Formfaktoren bei Mainboards?",
+            "options": [
+                "A) ATX (305×244 mm), Micro-ATX (244×244 mm), Mini-ITX (170×170 mm).",
+                "B) Wandelt Wechselstrom zu Gleichstrom. Versorgung aller Komponenten mit Strom.",
+                "C) Unterbrechungsfreie Stromversorgung. Schuetzt vor Stromausfaellen und Spannungsspitzen.",
+                "D) Online-USV: Dauerbetrieb ueber Batterie (besser). Offline-USV: Schaltet bei Ausfall um (guenstiger)."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf3_q10",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist ein Netzteil (PSU)?",
+            "options": [
+                "A) Unterbrechungsfreie Stromversorgung. Schuetzt vor Stromausfaellen und Spannungsspitzen.",
+                "B) Wandelt Wechselstrom zu Gleichstrom. Versorgung aller Komponenten mit Strom.",
+                "C) Online-USV: Dauerbetrieb ueber Batterie (besser). Offline-USV: Schaltet bei Ausfall um (guenstiger).",
+                "D) Leistungsaufnahme aller Geraete × Ueberbrueckungszeit. Angabe in VA (Volt-Ampere) oder Watt."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf3_q11",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist eine USV?",
+            "options": [
+                "A) Leistungsaufnahme aller Geraete × Ueberbrueckungszeit. Angabe in VA (Volt-Ampere) oder Watt.",
+                "B) Online-USV: Dauerbetrieb ueber Batterie (besser). Offline-USV: Schaltet bei Ausfall um (guenstiger).",
+                "C) Unterbrechungsfreie Stromversorgung. Schuetzt vor Stromausfaellen und Spannungsspitzen.",
+                "D) Zeit die die USV bei Stromausfall ueberbruecken kann (meist 5-30 Minuten)."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf3_q12",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist der Unterschied zwischen Online-USV und Offline-USV?",
+            "options": [
+                "A) Volt-Ampere. Scheinleistung. Watt = VA × Power Factor (meist 0,6-0,9).",
+                "B) Leistungsaufnahme aller Geraete × Ueberbrueckungszeit. Angabe in VA (Volt-Ampere) oder Watt.",
+                "C) Zeit die die USV bei Stromausfall ueberbruecken kann (meist 5-30 Minuten).",
+                "D) Online-USV: Dauerbetrieb ueber Batterie (besser). Offline-USV: Schaltet bei Ausfall um (guenstiger)."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf3_q13",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Wie dimensioniert man eine USV?",
+            "options": [
+                "A) Leistungsaufnahme aller Geraete × Ueberbrueckungszeit. Angabe in VA (Volt-Ampere) oder Watt.",
+                "B) Zeit die die USV bei Stromausfall ueberbruecken kann (meist 5-30 Minuten).",
+                "C) Volt-Ampere. Scheinleistung. Watt = VA × Power Factor (meist 0,6-0,9).",
+                "D) Zwischenform: Spannungsregelung ohne Batterie, Batterie nur bei Ausfall."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf3_q14",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist die Ueberbrueckungszeit einer USV?",
+            "options": [
+                "A) Volt-Ampere. Scheinleistung. Watt = VA × Power Factor (meist 0,6-0,9).",
+                "B) Zeit die die USV bei Stromausfall ueberbruecken kann (meist 5-30 Minuten).",
+                "C) Zwischenform: Spannungsregelung ohne Batterie, Batterie nur bei Ausfall.",
+                "D) Verhindert Datenverlust, schuetzt Hardware, ermoeglicht geordnetes Herunterfahren."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf3_q15",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist VA bei USV?",
+            "options": [
+                "A) Verhindert Datenverlust, schuetzt Hardware, ermoeglicht geordnetes Herunterfahren.",
+                "B) Zwischenform: Spannungsregelung ohne Batterie, Batterie nur bei Ausfall.",
+                "C) Volt-Ampere. Scheinleistung. Watt = VA × Power Factor (meist 0,6-0,9).",
+                "D) Konstante Ausgangsspannung trotz Schwankungen im Eingangsnetz."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf3_q16",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist ein Line-Interactive USV?",
+            "options": [
+                "A) Schutz vor Spannungsspitzen (Blitz, Schaltvorgaenge).",
+                "B) Verhindert Datenverlust, schuetzt Hardware, ermoeglicht geordnetes Herunterfahren.",
+                "C) Konstante Ausgangsspannung trotz Schwankungen im Eingangsnetz.",
+                "D) Zwischenform: Spannungsregelung ohne Batterie, Batterie nur bei Ausfall."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf3_q17",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Warum ist USV wichtig?",
+            "options": [
+                "A) Verhindert Datenverlust, schuetzt Hardware, ermoeglicht geordnetes Herunterfahren.",
+                "B) Konstante Ausgangsspannung trotz Schwankungen im Eingangsnetz.",
+                "C) Schutz vor Spannungsspitzen (Blitz, Schaltvorgaenge).",
+                "D) Regelmaessige Batterietests, Batteriewechsel alle 3-5 Jahre, Luefterreinigung."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf3_q18",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist eine Spannungsstabilisierung?",
+            "options": [
+                "A) Schutz vor Spannungsspitzen (Blitz, Schaltvorgaenge).",
+                "B) Konstante Ausgangsspannung trotz Schwankungen im Eingangsnetz.",
+                "C) Regelmaessige Batterietests, Batteriewechsel alle 3-5 Jahre, Luefterreinigung.",
+                "D) Zentraleinheit zur Ausfuehrung von Befehlen. Fuehrt Berechnungen durch und steuert andere Komponenten."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf3_q19",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Was ist ein Ueberspannungsschutz?",
+            "options": [
+                "A) Zentraleinheit zur Ausfuehrung von Befehlen. Fuehrt Berechnungen durch und steuert andere Komponenten.",
+                "B) Regelmaessige Batterietests, Batteriewechsel alle 3-5 Jahre, Luefterreinigung.",
+                "C) Schutz vor Spannungsspitzen (Blitz, Schaltvorgaenge).",
+                "D) HDD: Mechanische Festplatte (langsamer, guenstiger). SSD: Flash-Speicher (schneller, teurer, stossfester)."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf3_q20",
+            "difficulty": 1,
+            "categories": [
+                "lf3",
+                "topic-3-1"
+            ],
+            "question": "Wie wartet man eine USV?",
+            "options": [
+                "A) Non-Volatile Memory Express. Schnelles Protokoll fuer SSDs ueber PCIe (bis zu 7000 MB/s).",
+                "B) Zentraleinheit zur Ausfuehrung von Befehlen. Fuehrt Berechnungen durch und steuert andere Komponenten.",
+                "C) HDD: Mechanische Festplatte (langsamer, guenstiger). SSD: Flash-Speicher (schneller, teurer, stossfester).",
+                "D) Regelmaessige Batterietests, Batteriewechsel alle 3-5 Jahre, Luefterreinigung."
+            ],
+            "correctAnswer": 3
+        }
+    ]
+}

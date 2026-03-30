@@ -1,0 +1,327 @@
+{
+    "id": "lf2",
+    "name": "LF2",
+    "description": "Questions about the learning field 2 in the curriculum.",
+    "questions": [
+        {
+            "id": "lf2_q1",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was ist eine Nutzwertanalyse?",
+            "options": [
+                "A) Ein Verfahren zur Bewertung von Alternativen anhand mehrerer Kriterien mit unterschiedlicher Gewichtung.",
+                "B) Bei komplexen Entscheidungen mit mehreren Kriterien die nicht monetaer sind.",
+                "C) Nutzwert = Σ (Einzelbewertung × Gewichtung). Die Alternative mit dem hoechsten Nutzwert gewinnt.",
+                "D) 1. Kriterien festlegen, 2. Gewichten, 3. Bewerten, 4. Nutzwert berechnen, 5. Entscheiden."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf2_q2",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Wann verwendet man eine Nutzwertanalyse?",
+            "options": [
+                "A) Nutzwert = Σ (Einzelbewertung × Gewichtung). Die Alternative mit dem hoechsten Nutzwert gewinnt.",
+                "B) Bei komplexen Entscheidungen mit mehreren Kriterien die nicht monetaer sind.",
+                "C) 1. Kriterien festlegen, 2. Gewichten, 3. Bewerten, 4. Nutzwert berechnen, 5. Entscheiden.",
+                "D) Prozentuale Bedeutung jedes Kriteriums (muss zusammen 100% ergeben)."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf2_q3",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Wie berechnet man den Nutzwert?",
+            "options": [
+                "A) Prozentuale Bedeutung jedes Kriteriums (muss zusammen 100% ergeben).",
+                "B) 1. Kriterien festlegen, 2. Gewichten, 3. Bewerten, 4. Nutzwert berechnen, 5. Entscheiden.",
+                "C) Nutzwert = Σ (Einzelbewertung × Gewichtung). Die Alternative mit dem hoechsten Nutzwert gewinnt.",
+                "D) Skala von 1-5 oder 1-10 fuer jedes Kriterium je Alternative."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf2_q4",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was sind die Schritte einer Nutzwertanalyse?",
+            "options": [
+                "A) Nutzwert: Nicht-monetaere Kriterien. Kosten-Nutzen: Monetaere Bewertung.",
+                "B) Prozentuale Bedeutung jedes Kriteriums (muss zusammen 100% ergeben).",
+                "C) Skala von 1-5 oder 1-10 fuer jedes Kriterium je Alternative.",
+                "D) 1. Kriterien festlegen, 2. Gewichten, 3. Bewerten, 4. Nutzwert berechnen, 5. Entscheiden."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf2_q5",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was ist die Gewichtung bei der Nutzwertanalyse?",
+            "options": [
+                "A) Prozentuale Bedeutung jedes Kriteriums (muss zusammen 100% ergeben).",
+                "B) Skala von 1-5 oder 1-10 fuer jedes Kriterium je Alternative.",
+                "C) Nutzwert: Nicht-monetaere Kriterien. Kosten-Nutzen: Monetaere Bewertung.",
+                "D) Softwareauswahl: Funktionalitaet (40%), Preis (30%), Support (20%), Usability (10%)."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf2_q6",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Wie bewertet man bei der Nutzwertanalyse?",
+            "options": [
+                "A) Nutzwert: Nicht-monetaere Kriterien. Kosten-Nutzen: Monetaere Bewertung.",
+                "B) Skala von 1-5 oder 1-10 fuer jedes Kriterium je Alternative.",
+                "C) Softwareauswahl: Funktionalitaet (40%), Preis (30%), Support (20%), Usability (10%).",
+                "D) Wenn Kriterien sich widersprechen (z.B. hohe Qualitaet vs. niedriger Preis)."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf2_q7",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was ist der Unterschied zur Kosten-Nutzen-Analyse?",
+            "options": [
+                "A) Wenn Kriterien sich widersprechen (z.B. hohe Qualitaet vs. niedriger Preis).",
+                "B) Softwareauswahl: Funktionalitaet (40%), Preis (30%), Support (20%), Usability (10%).",
+                "C) Nutzwert: Nicht-monetaere Kriterien. Kosten-Nutzen: Monetaere Bewertung.",
+                "D) Transparente Entscheidung, mehrere Kriterien, nachvollziehbar, objektivierbar."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf2_q8",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Nenne ein Beispiel fuer eine Nutzwertanalyse.",
+            "options": [
+                "A) Gegenueberstellung mehrerer Angebote nach quantitativen und qualitativen Kriterien.",
+                "B) Wenn Kriterien sich widersprechen (z.B. hohe Qualitaet vs. niedriger Preis).",
+                "C) Transparente Entscheidung, mehrere Kriterien, nachvollziehbar, objektivierbar.",
+                "D) Softwareauswahl: Funktionalitaet (40%), Preis (30%), Support (20%), Usability (10%)."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf2_q9",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was ist ein Zielkonflikt bei der Nutzwertanalyse?",
+            "options": [
+                "A) Wenn Kriterien sich widersprechen (z.B. hohe Qualitaet vs. niedriger Preis).",
+                "B) Transparente Entscheidung, mehrere Kriterien, nachvollziehbar, objektivierbar.",
+                "C) Gegenueberstellung mehrerer Angebote nach quantitativen und qualitativen Kriterien.",
+                "D) Messbare Werte: Preis, Lieferzeit, Menge, Rabatt, Skonto."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf2_q10",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was sind die Vorteile der Nutzwertanalyse?",
+            "options": [
+                "A) Gegenueberstellung mehrerer Angebote nach quantitativen und qualitativen Kriterien.",
+                "B) Transparente Entscheidung, mehrere Kriterien, nachvollziehbar, objektivierbar.",
+                "C) Messbare Werte: Preis, Lieferzeit, Menge, Rabatt, Skonto.",
+                "D) Nicht messbare Werte: Qualitaet, Service, Reputation, Garantie."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf2_q11",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was ist ein Angebotsvergleich?",
+            "options": [
+                "A) Nicht messbare Werte: Qualitaet, Service, Reputation, Garantie.",
+                "B) Messbare Werte: Preis, Lieferzeit, Menge, Rabatt, Skonto.",
+                "C) Gegenueberstellung mehrerer Angebote nach quantitativen und qualitativen Kriterien.",
+                "D) Je nach Prioritaet: Preis 40%, Qualitaet 30%, Lieferzeit 20%, Service 10%."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf2_q12",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was sind quantitative Kriterien?",
+            "options": [
+                "A) Tabelle mit allen Angeboten und Kriterien im Vergleich.",
+                "B) Nicht messbare Werte: Qualitaet, Service, Reputation, Garantie.",
+                "C) Je nach Prioritaet: Preis 40%, Qualitaet 30%, Lieferzeit 20%, Service 10%.",
+                "D) Messbare Werte: Preis, Lieferzeit, Menge, Rabatt, Skonto."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf2_q13",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was sind qualitative Kriterien?",
+            "options": [
+                "A) Nicht messbare Werte: Qualitaet, Service, Reputation, Garantie.",
+                "B) Je nach Prioritaet: Preis 40%, Qualitaet 30%, Lieferzeit 20%, Service 10%.",
+                "C) Tabelle mit allen Angeboten und Kriterien im Vergleich.",
+                "D) Niedrigster Preis, aber nicht immer das beste Angebot (Qualitaet beachten!)."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf2_q14",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Wie gewichtet man beim Angebotsvergleich?",
+            "options": [
+                "A) Tabelle mit allen Angeboten und Kriterien im Vergleich.",
+                "B) Je nach Prioritaet: Preis 40%, Qualitaet 30%, Lieferzeit 20%, Service 10%.",
+                "C) Niedrigster Preis, aber nicht immer das beste Angebot (Qualitaet beachten!).",
+                "D) Bestes Preis-Leistungs-Verhaeltnis, nicht unbedingt guenstigster Preis."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf2_q15",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was ist eine Angebotsmatrix?",
+            "options": [
+                "A) Bestes Preis-Leistungs-Verhaeltnis, nicht unbedingt guenstigster Preis.",
+                "B) Niedrigster Preis, aber nicht immer das beste Angebot (Qualitaet beachten!).",
+                "C) Tabelle mit allen Angeboten und Kriterien im Vergleich.",
+                "D) Vom Auftraggeber: Beschreibung der Anforderungen (WAS soll gemacht werden)."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf2_q16",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was ist der guenstigste Preis?",
+            "options": [
+                "A) Vom Auftragnehmer: Beschreibung der Umsetzung (WIE wird es umgesetzt).",
+                "B) Bestes Preis-Leistungs-Verhaeltnis, nicht unbedingt guenstigster Preis.",
+                "C) Vom Auftraggeber: Beschreibung der Anforderungen (WAS soll gemacht werden).",
+                "D) Niedrigster Preis, aber nicht immer das beste Angebot (Qualitaet beachten!)."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf2_q17",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was ist die wirtschaftlichste Loesung?",
+            "options": [
+                "A) Bestes Preis-Leistungs-Verhaeltnis, nicht unbedingt guenstigster Preis.",
+                "B) Vom Auftraggeber: Beschreibung der Anforderungen (WAS soll gemacht werden).",
+                "C) Vom Auftragnehmer: Beschreibung der Umsetzung (WIE wird es umgesetzt).",
+                "D) Vermeidung von Fehlentscheidungen, Transparenz, bessere Verhandlungsposition."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf2_q18",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was ist ein Lastenheft?",
+            "options": [
+                "A) Vom Auftragnehmer: Beschreibung der Umsetzung (WIE wird es umgesetzt).",
+                "B) Vom Auftraggeber: Beschreibung der Anforderungen (WAS soll gemacht werden).",
+                "C) Vermeidung von Fehlentscheidungen, Transparenz, bessere Verhandlungsposition.",
+                "D) Ein Verfahren zur Bewertung von Alternativen anhand mehrerer Kriterien mit unterschiedlicher Gewichtung."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf2_q19",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Was ist ein Pflichtenheft?",
+            "options": [
+                "A) Ein Verfahren zur Bewertung von Alternativen anhand mehrerer Kriterien mit unterschiedlicher Gewichtung.",
+                "B) Vermeidung von Fehlentscheidungen, Transparenz, bessere Verhandlungsposition.",
+                "C) Vom Auftragnehmer: Beschreibung der Umsetzung (WIE wird es umgesetzt).",
+                "D) Bei komplexen Entscheidungen mit mehreren Kriterien die nicht monetaer sind."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf2_q20",
+            "difficulty": 1,
+            "categories": [
+                "lf2",
+                "topic-2-1"
+            ],
+            "question": "Warum ist ein Angebotsvergleich wichtig?",
+            "options": [
+                "A) Nutzwert = Σ (Einzelbewertung × Gewichtung). Die Alternative mit dem hoechsten Nutzwert gewinnt.",
+                "B) Ein Verfahren zur Bewertung von Alternativen anhand mehrerer Kriterien mit unterschiedlicher Gewichtung.",
+                "C) Bei komplexen Entscheidungen mit mehreren Kriterien die nicht monetaer sind.",
+                "D) Vermeidung von Fehlentscheidungen, Transparenz, bessere Verhandlungsposition."
+            ],
+            "correctAnswer": 3
+        }
+    ]
+}

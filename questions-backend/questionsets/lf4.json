@@ -1,0 +1,327 @@
+{
+    "id": "lf4",
+    "name": "LF4",
+    "description": "Questions about the learning field 4 in the curriculum.",
+    "questions": [
+        {
+            "id": "lf4_q1",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist der Unterschied zwischen Windows und Linux?",
+            "options": [
+                "A) Windows: Proprietaer, GUI-fokussiert, breite Software-Unterstuetzung. Linux: Open Source, CLI-stark, sicherer, flexibler.",
+                "B) Kern des Betriebssystems. Verwaltet Hardware-Ressourcen, Prozesse, Speicher.",
+                "C) Befehlszeileninterpreter. Ermoeglicht Textbefehle zur Systemsteuerung (bash, PowerShell).",
+                "D) Organisiert Daten auf Speichermedien. Beispiele: NTFS, ext4, APFS, FAT32."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf4_q2",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist ein Kernel?",
+            "options": [
+                "A) Befehlszeileninterpreter. Ermoeglicht Textbefehle zur Systemsteuerung (bash, PowerShell).",
+                "B) Kern des Betriebssystems. Verwaltet Hardware-Ressourcen, Prozesse, Speicher.",
+                "C) Organisiert Daten auf Speichermedien. Beispiele: NTFS, ext4, APFS, FAT32.",
+                "D) GUI: Grafische Oberflaeche (Maus). CLI: Kommandozeile (Tastatur)."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf4_q3",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist eine Shell?",
+            "options": [
+                "A) GUI: Grafische Oberflaeche (Maus). CLI: Kommandozeile (Tastatur).",
+                "B) Organisiert Daten auf Speichermedien. Beispiele: NTFS, ext4, APFS, FAT32.",
+                "C) Befehlszeileninterpreter. Ermoeglicht Textbefehle zur Systemsteuerung (bash, PowerShell).",
+                "D) Gleichzeitige Ausfuehrung mehrerer Prozesse."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf4_q4",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist ein Dateisystem?",
+            "options": [
+                "A) Mehrere Benutzer koennen das System gleichzeitig nutzen.",
+                "B) GUI: Grafische Oberflaeche (Maus). CLI: Kommandozeile (Tastatur).",
+                "C) Gleichzeitige Ausfuehrung mehrerer Prozesse.",
+                "D) Organisiert Daten auf Speichermedien. Beispiele: NTFS, ext4, APFS, FAT32."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf4_q5",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist der Unterschied zwischen GUI und CLI?",
+            "options": [
+                "A) GUI: Grafische Oberflaeche (Maus). CLI: Kommandozeile (Tastatur).",
+                "B) Gleichzeitige Ausfuehrung mehrerer Prozesse.",
+                "C) Mehrere Benutzer koennen das System gleichzeitig nutzen.",
+                "D) Hintergrundprozess der systemweit laeuft (z.B. Webserver, Drucker-Spooler)."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf4_q6",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist Multi-Tasking?",
+            "options": [
+                "A) Mehrere Benutzer koennen das System gleichzeitig nutzen.",
+                "B) Gleichzeitige Ausfuehrung mehrerer Prozesse.",
+                "C) Hintergrundprozess der systemweit laeuft (z.B. Webserver, Drucker-Spooler).",
+                "D) Software die Hardware-Komponenten mit dem OS verbindet."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf4_q7",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist Multi-User?",
+            "options": [
+                "A) Software die Hardware-Komponenten mit dem OS verbindet.",
+                "B) Hintergrundprozess der systemweit laeuft (z.B. Webserver, Drucker-Spooler).",
+                "C) Mehrere Benutzer koennen das System gleichzeitig nutzen.",
+                "D) Software-Aktualisierung fuer Fehlerbehebung oder Sicherheit."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf4_q8",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist ein Dienst/Service?",
+            "options": [
+                "A) Zentrale Verwaltung von Computern und Benutzern in einem Netzwerk (Active Directory).",
+                "B) Software die Hardware-Komponenten mit dem OS verbindet.",
+                "C) Software-Aktualisierung fuer Fehlerbehebung oder Sicherheit.",
+                "D) Hintergrundprozess der systemweit laeuft (z.B. Webserver, Drucker-Spooler)."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf4_q9",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist ein Treiber?",
+            "options": [
+                "A) Software die Hardware-Komponenten mit dem OS verbindet.",
+                "B) Software-Aktualisierung fuer Fehlerbehebung oder Sicherheit.",
+                "C) Zentrale Verwaltung von Computern und Benutzern in einem Netzwerk (Active Directory).",
+                "D) Microsoft-Verzeichnisdienst. Zentrale Verwaltung von Benutzern, Computern, Ressourcen."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf4_q10",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist ein Patch/Update?",
+            "options": [
+                "A) Zentrale Verwaltung von Computern und Benutzern in einem Netzwerk (Active Directory).",
+                "B) Software-Aktualisierung fuer Fehlerbehebung oder Sicherheit.",
+                "C) Microsoft-Verzeichnisdienst. Zentrale Verwaltung von Benutzern, Computern, Ressourcen.",
+                "D) DNS-Server der Domaene, Administratorrechte, Computerkonto wird erstellt."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf4_q11",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist eine Domaene?",
+            "options": [
+                "A) DNS-Server der Domaene, Administratorrechte, Computerkonto wird erstellt.",
+                "B) Microsoft-Verzeichnisdienst. Zentrale Verwaltung von Benutzern, Computern, Ressourcen.",
+                "C) Zentrale Verwaltung von Computern und Benutzern in einem Netzwerk (Active Directory).",
+                "D) Organisationseinheit in Active Directory. Ermoeglicht strukturierte Verwaltung und GPO-Verknuepfung."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf4_q12",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist Active Directory?",
+            "options": [
+                "A) Gruppenrichtlinienobjekt. Zentrale Einstellungen fuer Benutzer und Computer (z.B. Passwortrichtlinien).",
+                "B) DNS-Server der Domaene, Administratorrechte, Computerkonto wird erstellt.",
+                "C) Organisationseinheit in Active Directory. Ermoeglicht strukturierte Verwaltung und GPO-Verknuepfung.",
+                "D) Microsoft-Verzeichnisdienst. Zentrale Verwaltung von Benutzern, Computern, Ressourcen."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf4_q13",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was braucht man, um einen PC in eine Domaene einzubinden?",
+            "options": [
+                "A) DNS-Server der Domaene, Administratorrechte, Computerkonto wird erstellt.",
+                "B) Organisationseinheit in Active Directory. Ermoeglicht strukturierte Verwaltung und GPO-Verknuepfung.",
+                "C) Gruppenrichtlinienobjekt. Zentrale Einstellungen fuer Benutzer und Computer (z.B. Passwortrichtlinien).",
+                "D) Server der Active Directory verwaltet und Authentifizierung durchfuehrt."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf4_q14",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist eine OU (Organizational Unit)?",
+            "options": [
+                "A) Gruppenrichtlinienobjekt. Zentrale Einstellungen fuer Benutzer und Computer (z.B. Passwortrichtlinien).",
+                "B) Organisationseinheit in Active Directory. Ermoeglicht strukturierte Verwaltung und GPO-Verknuepfung.",
+                "C) Server der Active Directory verwaltet und Authentifizierung durchfuehrt.",
+                "D) Lightweight Directory Access Protocol. Protokoll fuer Verzeichnisdienste."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf4_q15",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist eine GPO?",
+            "options": [
+                "A) Lightweight Directory Access Protocol. Protokoll fuer Verzeichnisdienste.",
+                "B) Server der Active Directory verwaltet und Authentifizierung durchfuehrt.",
+                "C) Gruppenrichtlinienobjekt. Zentrale Einstellungen fuer Benutzer und Computer (z.B. Passwortrichtlinien).",
+                "D) Authentifizierungsprotokoll das Tickets fuer sichere Anmeldung verwendet."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf4_q16",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist ein Domain Controller?",
+            "options": [
+                "A) Vertrauensstellung zwischen zwei Domaenen fuer Ressourcenfreigabe.",
+                "B) Lightweight Directory Access Protocol. Protokoll fuer Verzeichnisdienste.",
+                "C) Authentifizierungsprotokoll das Tickets fuer sichere Anmeldung verwendet.",
+                "D) Server der Active Directory verwaltet und Authentifizierung durchfuehrt."
+            ],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf4_q17",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist LDAP?",
+            "options": [
+                "A) Lightweight Directory Access Protocol. Protokoll fuer Verzeichnisdienste.",
+                "B) Authentifizierungsprotokoll das Tickets fuer sichere Anmeldung verwendet.",
+                "C) Vertrauensstellung zwischen zwei Domaenen fuer Ressourcenfreigabe.",
+                "D) Zentraler Index aller AD-Objekte im Wald. Ermoeglicht schnelle Suche."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf4_q18",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist Kerberos?",
+            "options": [
+                "A) Vertrauensstellung zwischen zwei Domaenen fuer Ressourcenfreigabe.",
+                "B) Authentifizierungsprotokoll das Tickets fuer sichere Anmeldung verwendet.",
+                "C) Zentraler Index aller AD-Objekte im Wald. Ermoeglicht schnelle Suche.",
+                "D) Windows: Proprietaer, GUI-fokussiert, breite Software-Unterstuetzung. Linux: Open Source, CLI-stark, sicherer, flexibler."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf4_q19",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist ein Trust Relationship?",
+            "options": [
+                "A) Windows: Proprietaer, GUI-fokussiert, breite Software-Unterstuetzung. Linux: Open Source, CLI-stark, sicherer, flexibler.",
+                "B) Zentraler Index aller AD-Objekte im Wald. Ermoeglicht schnelle Suche.",
+                "C) Vertrauensstellung zwischen zwei Domaenen fuer Ressourcenfreigabe.",
+                "D) Kern des Betriebssystems. Verwaltet Hardware-Ressourcen, Prozesse, Speicher."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf4_q20",
+            "difficulty": 1,
+            "categories": [
+                "lf4",
+                "topic-4-1"
+            ],
+            "question": "Was ist der Global Catalog?",
+            "options": [
+                "A) Befehlszeileninterpreter. Ermoeglicht Textbefehle zur Systemsteuerung (bash, PowerShell).",
+                "B) Windows: Proprietaer, GUI-fokussiert, breite Software-Unterstuetzung. Linux: Open Source, CLI-stark, sicherer, flexibler.",
+                "C) Kern des Betriebssystems. Verwaltet Hardware-Ressourcen, Prozesse, Speicher.",
+                "D) Zentraler Index aller AD-Objekte im Wald. Ermoeglicht schnelle Suche."
+            ],
+            "correctAnswer": 3
+        }
+    ]
+}

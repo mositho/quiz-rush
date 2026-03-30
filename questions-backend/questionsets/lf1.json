@@ -1,0 +1,262 @@
+{
+    "id": "lf1",
+    "name": "LF1",
+    "description": "Questions about the first learning field in the curriculum.",
+    "questions": [
+        {
+            "id": "lf1_q1",
+            "difficulty": 1,
+            "categories": ["lf1", "marktformen"],
+            "question": "Was ist ein Monopol?",
+            "options": [
+                "A) Ein Markt mit nur einem Anbieter (Alleinanbieter). Der Anbieter hat Preisgestaltungsmacht.",
+                "B) Ein Markt mit vielen Anbietern und einem Nachfrager.",
+                "C) Ein Markt mit staatlich festgelegten Preisen.",
+                "D) Ein Markt mit vielen Anbietern und vielen Nachfragern."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf1_q2",
+            "difficulty": 1,
+            "categories": ["lf1", "marktformen"],
+            "question": "Nenne ein Beispiel fuer ein Monopol.",
+            "options": [
+                "A) Tankstellen in Deutschland",
+                "B) Deutsche Bahn im Fernverkehr (frueher), lokale Wasserwerke, patentgeschuetzte Medikamente.",
+                "C) Friseursalons in einer Grossstadt",
+                "D) Mobilfunkanbieter in Deutschland"
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf1_q3",
+            "difficulty": 1,
+            "categories": ["lf1", "marktformen"],
+            "question": "Was ist ein Angebotsmonopol?",
+            "options": [
+                "A) Nur EIN Anbieter steht vielen Nachfragern gegenueber.",
+                "B) Viele Anbieter stehen einem Nachfrager gegenueber.",
+                "C) Es gibt nur einen Preis, aber viele Anbieter.",
+                "D) Der Staat tritt als einziger Nachfrager auf."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf1_q4",
+            "difficulty": 1,
+            "categories": ["lf1", "marktformen"],
+            "question": "Was ist ein Nachfragemonopol?",
+            "options": [
+                "A) Ein Markt mit beliebig vielen Nachfragern.",
+                "B) Nur EIN Nachfrager steht vielen Anbietern gegenueber (z.B. Staat bei Ruestung).",
+                "C) Ein Markt ohne Wettbewerb.",
+                "D) Ein Markt mit nur einem Anbieter."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf1_q5",
+            "difficulty": 1,
+            "categories": ["lf1", "marktformen"],
+            "question": "Was ist ein Oligopol?",
+            "options": [
+                "A) Ein Markt mit nur einem Anbieter.",
+                "B) Ein Markt mit vielen Anbietern ohne Einfluss aufeinander.",
+                "C) Ein Markt mit wenigen Anbietern, die sich gegenseitig beeinflussen.",
+                "D) Ein Markt mit festgelegten staatlichen Preisen."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf1_q6",
+            "difficulty": 1,
+            "categories": ["lf1", "marktformen"],
+            "question": "Nenne ein Beispiel fuer ein Oligopol.",
+            "options": [
+                "A) Mobilfunkanbieter (Telekom, Vodafone, O2), Tankstellen, Flugzeughersteller.",
+                "B) Lokale Wochenmaerkte mit vielen Staenden.",
+                "C) Patentgeschuetzte Einzelprodukte.",
+                "D) Oeffentliche Schulen"
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf1_q7",
+            "difficulty": 1,
+            "categories": ["lf1", "marktformen"],
+            "question": "Was ist ein Polypol?",
+            "options": [
+                "A) Ein Markt mit zwei dominierenden Anbietern.",
+                "B) Ein Markt mit vielen Anbietern und vielen Nachfragern. Kein Anbieter hat Marktmacht.",
+                "C) Ein Markt mit nur einem Nachfrager.",
+                "D) Ein Markt ohne Preiswettbewerb."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf1_q8",
+            "difficulty": 1,
+            "categories": ["lf1", "marktformen"],
+            "question": "Nenne ein Beispiel fuer ein Polypol.",
+            "options": [
+                "A) Energieversorgung durch ein Stadtwerk",
+                "B) Flugzeughersteller weltweit",
+                "C) Einzelhandel, Restaurants, Handwerksbetriebe, Friseure.",
+                "D) Pharmapatente"
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf1_q9",
+            "difficulty": 1,
+            "categories": ["lf1", "it-markt"],
+            "question": "Welche Marktform liegt bei den meisten IT-Dienstleistern vor?",
+            "options": ["A) Monopol", "B) Oligopol", "C) Nachfragemonopol", "D) Polypol (viele Anbieter, viele Nachfrager, freier Wettbewerb)."],
+            "correctAnswer": 3
+        },
+        {
+            "id": "lf1_q10",
+            "difficulty": 1,
+            "categories": ["lf1", "it-markt"],
+            "question": "Warum ist die Marktform fuer IT-Fachleute wichtig?",
+            "options": [
+                "A) Sie bestimmt nur die Anzahl der Mitarbeitenden.",
+                "B) Sie beeinflusst Preise, Verhandlungsmacht und Wettbewerbsstrategien.",
+                "C) Sie hat nur Auswirkungen auf Hardwarepreise.",
+                "D) Sie ist nur fuer Behoerden relevant."
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf1_q11",
+            "difficulty": 1,
+            "categories": ["lf1", "marktformen"],
+            "question": "Was ist ein natuerliches Monopol?",
+            "options": [
+                "A) Monopol durch hohe Fixkosten (z.B. Stromnetz, Wasserleitungen).",
+                "B) Monopol durch staatlich begrenzte Oeffnungszeiten.",
+                "C) Monopol durch hohe Nachfrage.",
+                "D) Monopol durch wenige Nachfrager."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf1_q12",
+            "difficulty": 1,
+            "categories": ["lf1", "marktformen"],
+            "question": "Was ist ein rechtliches Monopol?",
+            "options": [
+                "A) Monopol durch geographische Lage.",
+                "B) Monopol durch Fusion vieler Anbieter.",
+                "C) Monopol durch Gesetz oder Patent (z.B. Pharmapatente).",
+                "D) Monopol durch Kundentreue."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf1_q13",
+            "difficulty": 1,
+            "categories": ["lf1", "markt"],
+            "question": "Was ist ein Kaeufermarkt?",
+            "options": [
+                "A) Das Angebot ist groesser als die Nachfrage. Kaeufer haben bessere Verhandlungsposition.",
+                "B) Die Nachfrage ist groesser als das Angebot.",
+                "C) Es gibt nur einen Anbieter.",
+                "D) Der Staat ist Hauptnachfrager."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf1_q14",
+            "difficulty": 1,
+            "categories": ["lf1", "markt"],
+            "question": "Was ist ein Verkaeufermarkt?",
+            "options": [
+                "A) Die Nachfrage ist groesser als das Angebot. Verkaeufer koennen hoehere Preise durchsetzen.",
+                "B) Das Angebot ist groesser als die Nachfrage.",
+                "C) Es gibt sehr viele Anbieter und viele Nachfrager.",
+                "D) Nur Kaeufer koennen Preise bestimmen."
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf1_q15",
+            "difficulty": 1,
+            "categories": ["lf1", "markt"],
+            "question": "Wer hat auf einem Kaeufermarkt die bessere Position?",
+            "options": [
+                "A) Der Verkaeufer",
+                "B) Der Kaeufer (kann Preise druecken, Qualitaet fordern).",
+                "C) Beide gleich stark",
+                "D) Nur der Staat"
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf1_q16",
+            "difficulty": 1,
+            "categories": ["lf1", "markt"],
+            "question": "Wer hat auf einem Verkaeufermarkt die bessere Position?",
+            "options": [
+                "A) Der Verkaeufer (kann Preise erhoehen, Lieferzeiten diktieren).",
+                "B) Der Kaeufer (kann Preise senken).",
+                "C) Nur Zwischenhaendler",
+                "D) Es gibt keine bessere Position"
+            ],
+            "correctAnswer": 0
+        },
+        {
+            "id": "lf1_q17",
+            "difficulty": 1,
+            "categories": ["lf1", "it-markt"],
+            "question": "Welcher Markt liegt bei PCs/Laptops vor?",
+            "options": [
+                "A) Verkaeufermarkt",
+                "B) Monopol",
+                "C) Kaeufermarkt (grosses Angebot, viele Hersteller, Preisdruck).",
+                "D) Nachfragemonopol"
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf1_q18",
+            "difficulty": 1,
+            "categories": ["lf1", "it-markt"],
+            "question": "Welcher Markt liegt bei hochspezialisierten IT-Fachkraeften vor?",
+            "options": [
+                "A) Kaeufermarkt",
+                "B) Verkaeufermarkt (grosse Nachfrage, wenig qualifizierte Anbieter).",
+                "C) Polypol",
+                "D) Vollkommener Wettbewerb ohne Nachfrage"
+            ],
+            "correctAnswer": 1
+        },
+        {
+            "id": "lf1_q19",
+            "difficulty": 1,
+            "categories": ["lf1", "preisbildung"],
+            "question": "Was passiert mit Preisen auf einem Kaeufermarkt?",
+            "options": [
+                "A) Sie steigen durch Knappheit.",
+                "B) Sie bleiben gesetzlich fix.",
+                "C) Sie sinken durch Wettbewerb und Ueberangebot.",
+                "D) Sie verdoppeln sich saisonal."
+            ],
+            "correctAnswer": 2
+        },
+        {
+            "id": "lf1_q20",
+            "difficulty": 1,
+            "categories": ["lf1", "preisbildung"],
+            "question": "Was passiert mit Preisen auf einem Verkaeufermarkt?",
+            "options": [
+                "A) Sie sinken durch Ueberangebot.",
+                "B) Sie steigen durch hohe Nachfrage und Knappheit.",
+                "C) Sie werden immer vom Staat festgelegt.",
+                "D) Sie bleiben unabhaengig von Angebot und Nachfrage."
+            ],
+            "correctAnswer": 1
+        }
+    ]
+}

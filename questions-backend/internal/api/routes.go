@@ -6,10 +6,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
-	"github.com/jackc/pgx/v5/pgxpool"
+
+	"quiz-rush/questions-backend/internal/setloader"
 )
 
-func NewRouter(db *pgxpool.Pool) http.Handler {
+func NewRouter(loader *setloader.Indexer) http.Handler {
 	r := chi.NewRouter()
 
 	allowedOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
@@ -21,12 +22,12 @@ func NewRouter(db *pgxpool.Pool) http.Handler {
 		AllowCredentials: false,
 	}))
 
-	handler := NewHandler(db)
+	handler := NewHandler(loader)
 
 	r.Get("/health", handler.Health)
 	r.Route("/api", func(api chi.Router) {
-		api.Get("/packages", handler.GetPackages)
-		api.Get("/packages/{slug}/questions", handler.GetQuestionsByPackage)
+		api.Get("/sets", handler.GetSets)
+		api.Get("/sets/{id}", handler.GetSetQuestions)
 	})
 
 	return r
