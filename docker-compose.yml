@@ -1,65 +1,113 @@
 services:
-  game-postgres:
-    image: postgres:18
-    container_name: quiz-rush-game-postgres
-    environment:
-      POSTGRES_DB: quizrush_game
-      POSTGRES_USER: quizrush_game
-      POSTGRES_PASSWORD: ${GAME_POSTGRES_PASSWORD:-quizrush_game}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    volumes:
-      - game_postgres_data:/var/lib/postgresql
+    game-postgres:
+        image: postgres:18
+        container_name: quiz-rush-game-postgres
+        environment:
+            POSTGRES_DB: quiz_rush_game
+            POSTGRES_USER: quiz_rush_game
+            POSTGRES_PASSWORD: ${GAME_POSTGRES_PASSWORD:-quiz_rush_game}
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        volumes:
+            - game_postgres_data:/var/lib/postgresql
 
-  questions-backend:
-    image: golang:1.25
-    container_name: quiz-rush-questions-backend
-    working_dir: /app
-    volumes:
-      - ./questions-backend:/app
-    command: go run ./cmd/server
-    environment:
-      DATABASE_URL: postgres://quizrush_questions:${QUESTIONS_POSTGRES_PASSWORD:-quizrush_questions}@questions-postgres:5432/quizrush_questions?sslmode=disable
-      PORT: "${QUESTIONS_BACKEND_PORT:-8080}"
-      CORS_ALLOWED_ORIGIN: "${CORS_ALLOWED_ORIGIN-}"
-    ports:
-      - "${QUESTIONS_BACKEND_HOST_PORT:-8081}:${QUESTIONS_BACKEND_PORT:-8080}"
+    keycloak-postgres:
+        image: postgres:18
+        container_name: quiz-rush-keycloak-postgres
+        environment:
+            POSTGRES_DB: keycloak
+            POSTGRES_USER: keycloak
+            POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-changeme}
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        volumes:
+            - keycloak_postgres_data:/var/lib/postgresql
 
-  game-backend:
-    image: golang:1.25
-    container_name: quiz-rush-game-backend
-    working_dir: /app
-    environment:
-      DATABASE_URL: postgres://quizrush_game:${GAME_POSTGRES_PASSWORD:-quizrush_game}@game-postgres:5432/quizrush_game?sslmode=disable
-      PORT: "${GAME_BACKEND_PORT:-8080}"
-      CORS_ALLOWED_ORIGIN: "${CORS_ALLOWED_ORIGIN-}"
-      QUESTIONS_API_BASE_URL: ${QUESTIONS_API_BASE_URL:-http://questions-backend:8080}
-    volumes:
-      - ./game-backend:/app
-    command: go run ./cmd/server
-    ports:
-      - "${GAME_BACKEND_HOST_PORT:-8080}:${GAME_BACKEND_PORT:-8080}"
-    depends_on:
-      game-postgres:
-        condition: service_healthy
-      questions-backend:
-        condition: service_started
+    questions-backend:
+        image: golang:1.25
+        container_name: quiz-rush-questions-backend
+        working_dir: /app
+        volumes:
+            - ./questions-backend:/app
+        command: go run ./cmd/server
+        environment:
+            PORT: "${QUESTIONS_BACKEND_PORT:-8080}"
+            CORS_ALLOWED_ORIGIN: "${CORS_ALLOWED_ORIGIN-}"
+        ports:
+            - "${QUESTIONS_BACKEND_HOST_PORT:-8081}:${QUESTIONS_BACKEND_PORT:-8080}"
 
-  frontend:
-    container_name: quiz-rush-frontend
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    env_file:
-      - frontend/.env
-    ports:
-      - "80:80"
-    depends_on:
-      game-backend:
-        condition: service_started
+    keycloak:
+        image: quay.io/keycloak/keycloak:26.2
+        container_name: quiz-rush-keycloak
+        command: ["start-dev", "--import-realm"]
+        environment:
+            KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+            KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
+            KC_DB: postgres
+            KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
+            KC_DB_USERNAME: keycloak
+            KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-changeme}
+            KC_HTTP_ENABLED: "true"
+            KC_HTTP_RELATIVE_PATH: /account
+            KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-localhost}
+            KC_HOSTNAME_STRICT: "false"
+            KC_PROXY_HEADERS: xforwarded
+        volumes:
+            - ./keycloak:/opt/keycloak/data/import:ro
+        depends_on:
+            keycloak-postgres:
+                condition: service_healthy
+
+    game-backend:
+        image: golang:1.25
+        container_name: quiz-rush-game-backend
+        restart: on-failure
+        working_dir: /app
+        environment:
+            DATABASE_URL: postgres://quiz_rush_game:${GAME_POSTGRES_PASSWORD:-quiz_rush_game}@game-postgres:5432/quiz_rush_game?sslmode=disable
+            PORT: "${GAME_BACKEND_PORT:-8080}"
+            CORS_ALLOWED_ORIGIN: "${CORS_ALLOWED_ORIGIN-}"
+            QUESTIONS_API_BASE_URL: ${QUESTIONS_API_BASE_URL:-http://questions-backend:8080}
+            KEYCLOAK_ISSUER_URL: ${KEYCLOAK_ISSUER_URL:-http://localhost/account/realms/quiz-rush}
+            KEYCLOAK_INTERNAL_ISSUER_URL: ${KEYCLOAK_INTERNAL_ISSUER_URL:-http://keycloak:8080/account/realms/quiz-rush}
+            KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-quiz-rush-app}
+        volumes:
+            - ./game-backend:/app
+        command: go run ./cmd/server
+        ports:
+            - "${GAME_BACKEND_HOST_PORT:-8080}:${GAME_BACKEND_PORT:-8080}"
+        depends_on:
+            game-postgres:
+                condition: service_healthy
+            questions-backend:
+                condition: service_started
+            keycloak:
+                condition: service_started
+
+    frontend:
+        container_name: quiz-rush-frontend
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+            args:
+                VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+                VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-http://localhost/account}
+                VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-quiz-rush}
+                VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-quiz-rush-app}
+        ports:
+            - "80:80"
+        depends_on:
+            game-backend:
+                condition: service_started
+            keycloak:
+                condition: service_started
 
 volumes:
-  game_postgres_data:
+    game_postgres_data:
+    keycloak_postgres_data:

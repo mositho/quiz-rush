@@ -10,7 +10,7 @@ import (
 )
 
 func TestHealthReturnsOKStatusJSON(t *testing.T) {
-	router := api.NewRouter(nil)
+	router := api.NewRouter(nil, nil)
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rr := httptest.NewRecorder()
 
@@ -31,5 +31,41 @@ func TestHealthReturnsOKStatusJSON(t *testing.T) {
 
 	if body["status"] != "ok" {
 		t.Fatalf("expected status field to be ok, got %q", body["status"])
+	}
+}
+
+func TestLeaderboardRemainsPublicWhenAuthMiddlewareIsConfigured(t *testing.T) {
+	authMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+		})
+	}
+
+	router := api.NewRouter(nil, authMiddleware)
+	req := httptest.NewRequest(http.MethodGet, "/api/leaderboard/general-knowledge", nil)
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rr.Code)
+	}
+}
+
+func TestCreateResultIsProtectedWhenAuthMiddlewareIsConfigured(t *testing.T) {
+	authMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+		})
+	}
+
+	router := api.NewRouter(nil, authMiddleware)
+	req := httptest.NewRequest(http.MethodPost, "/api/results", nil)
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
 	}
 }

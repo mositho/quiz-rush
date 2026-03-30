@@ -6,7 +6,7 @@
 
 The project uses three tracked env files plus one optional local override file:
 
-- Optional root `.env` for Docker Compose variable overrides such as DB passwords, host ports, `QUESTIONS_API_BASE_URL`, `VITE_API_BASE_URL`, and `CORS_ALLOWED_ORIGIN`
+- Optional root `.env` for Docker Compose variable overrides such as DB passwords, host ports, `QUESTIONS_API_BASE_URL`, `VITE_API_BASE_URL`, `KEYCLOAK_*`, and `CORS_ALLOWED_ORIGIN`
 - `questions-backend/.env` for the questions API when running it outside Docker
 - `game-backend/.env` for the game API when running it outside Docker
 - `frontend/.env` for frontend variables
@@ -35,18 +35,51 @@ Start everything with:
 docker compose up --build
 ```
 
+If you changed Postgres usernames/database names and see errors like `FATAL: role ... does not exist`, recreate the database volumes once:
+
+```sh
+docker compose down -v
+docker compose up --build
+```
+
 Important details:
 
-- The backend connects to Postgres with the Docker service hostname `postgres`
+- The backends connect to Postgres with Docker service hostnames
 - The frontend is built as static assets and served by Nginx
-- Nginx is the single public entry point on `http://localhost:5173`
-- All requests starting with `/api` are proxied by Nginx to the backend service inside Docker
-- The backend is not exposed directly on a host port in this setup
+- Nginx is the single public entry point on `http://localhost`
+- All requests starting with `/api` are proxied by Nginx to the game backend inside Docker
+- All requests starting with `/account` are proxied by Nginx to Keycloak inside Docker
+- Keycloak is served behind the same public origin under `/account`
 
 Quick checks after startup:
 
-- Frontend: `http://localhost:5173`
-- API health: `http://localhost:5173/api/health`
+- Frontend: `http://localhost`
+- API health: `http://localhost/health`
+- Keycloak discovery: `http://localhost/account/realms/quiz-rush/.well-known/openid-configuration`
+
+### Keycloak defaults
+
+Docker Compose starts Keycloak under `/account` with preconfigured defaults so the frontend and backend use the same public base URL.
+
+- Public Keycloak base URL: `http://localhost/account`
+- Realm: `quiz-rush`
+- Client ID: `quiz-rush-app`
+- Self-registration is enabled (`Sign up` on the login page)
+- Login with email is disabled (`username` login only)
+
+If you change `keycloak/realm-export.json`, recreate Keycloak data so import is applied again:
+
+```sh
+docker compose down -v
+docker compose up --build
+```
+
+For local development, Docker Compose provides fallback defaults for these sensitive values:
+
+- `KEYCLOAK_ADMIN_PASSWORD=changeme`
+- `KEYCLOAK_DB_PASSWORD=changeme`
+
+Override them in the root `.env` before sharing the environment or using it outside local development.
 
 ### Running services outside Docker
 
@@ -61,4 +94,13 @@ For local game backend to questions backend calls outside Docker, keep this in `
 
 ```env
 QUESTIONS_API_BASE_URL=http://localhost:8081
+```
+
+For local frontend development outside Docker, point the app to the standalone services in `frontend/.env`, for example:
+
+```env
+VITE_API_BASE_URL=http://localhost:8080/api
+VITE_KEYCLOAK_URL=http://localhost/account
+VITE_KEYCLOAK_REALM=quiz-rush
+VITE_KEYCLOAK_CLIENT_ID=quiz-rush-app
 ```

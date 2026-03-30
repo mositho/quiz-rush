@@ -33,11 +33,6 @@ func NewHandler(db *pgxpool.Pool, questionsClient *questionsclient.Client) *Hand
 	return &Handler{db: db, questionsClient: questionsClient}
 }
 
-func RegisterRoutes(r chi.Router, handler *Handler) {
-	r.Post("/results", handler.CreateResult)
-	r.Get("/leaderboard/{slug}", handler.GetLeaderboard)
-}
-
 func (h *Handler) CreateResult(w http.ResponseWriter, r *http.Request) {
 	httpjson.Write(w, http.StatusCreated, CreateResultResponse{Status: "created"})
 }

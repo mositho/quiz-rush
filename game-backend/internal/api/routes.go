@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewRouter(db *pgxpool.Pool) http.Handler {
+func NewRouter(db *pgxpool.Pool, authMiddleware func(http.Handler) http.Handler) http.Handler {
 	r := chi.NewRouter()
 
 	allowedOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
@@ -33,7 +33,12 @@ func NewRouter(db *pgxpool.Pool) http.Handler {
 
 	r.Get("/health", Health)
 	r.Route("/api", func(api chi.Router) {
-		game.RegisterRoutes(api, gameHandler)
+		if authMiddleware != nil {
+			api.With(authMiddleware).Post("/results", gameHandler.CreateResult)
+		} else {
+			api.Post("/results", gameHandler.CreateResult)
+		}
+		api.Get("/leaderboard/{slug}", gameHandler.GetLeaderboard)
 	})
 
 	return r

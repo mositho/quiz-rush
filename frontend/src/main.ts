@@ -2,5 +2,12 @@ import { createApp } from "vue"
 import App from "./App.vue"
 import "./assets/styles/index.css"
 import { router } from "./router"
+import { initKeycloak } from "./services/keycloak"
 
-createApp(App).use(router).mount("#app")
+async function bootstrap() {
+  await initKeycloak()
+
+  createApp(App).use(router).mount("#app")
+}
+
+void bootstrap()
