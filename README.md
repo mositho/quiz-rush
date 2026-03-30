@@ -1,5 +1,7 @@
 # Quiz Rush
 
+[Miro](https://miro.com/app/board/uXjVGt7dlRA=/?focusWidget=3458764665738994468)
+
 ## Environment setup
 
 The project uses three tracked env files plus one optional local override file:
