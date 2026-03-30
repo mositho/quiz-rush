@@ -37,6 +37,7 @@ func main() {
 }
 
 func loadBackendEnv() {
-	_ = godotenv.Load(".env")
-	_ = godotenv.Load("game-backend/.env")
+	if err := godotenv.Load("game-backend/.env"); err != nil {
+		log.Printf("WARNING: Missing game-backend/.env: %v", err)
+	}
 }

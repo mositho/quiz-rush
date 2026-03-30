@@ -37,14 +37,16 @@ docker compose up --build
 
 Important details:
 
-- The questions backend serves package and question data on `http://localhost:8081`
-- The game backend serves game routes on `http://localhost:8080` and calls the questions backend over HTTP
-- The questions backend uses its own Postgres database on `localhost:5432`
-- The game backend uses its own Postgres database on `localhost:5433`
-- The backend `.env` files are local-run defaults (`localhost` hosts and distinct ports), while Docker Compose overrides networking values for containers
-- Inside Docker Compose, the game backend reaches the questions backend at `http://questions-backend:8080`
-- Inside Docker Compose, the questions backend reaches `questions-postgres:5432` and the game backend reaches `game-postgres:5432`
-- The frontend still uses `http://localhost:8080` for the game backend unless you explicitly wire it to call the questions API directly
+- The backend connects to Postgres with the Docker service hostname `postgres`
+- The frontend is built as static assets and served by Nginx
+- Nginx is the single public entry point on `http://localhost:5173`
+- All requests starting with `/api` are proxied by Nginx to the backend service inside Docker
+- The backend is not exposed directly on a host port in this setup
+
+Quick checks after startup:
+
+- Frontend: `http://localhost:5173`
+- API health: `http://localhost:5173/api/health`
 
 ### Running services outside Docker
 
