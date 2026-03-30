@@ -1,92 +1,90 @@
 services:
-  questions-postgres:
-    image: postgres:18
-    container_name: quiz-rush-questions-postgres
-    environment:
-      POSTGRES_DB: ${QUESTIONS_POSTGRES_DB}
-      POSTGRES_USER: ${QUESTIONS_POSTGRES_USER}
-      POSTGRES_PASSWORD: ${QUESTIONS_POSTGRES_PASSWORD}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    ports:
-      - "5432:5432"
-    volumes:
-      - questions_postgres_data:/var/lib/postgresql
+    questions-postgres:
+        image: postgres:18
+        container_name: quiz-rush-questions-postgres
+        environment:
+            POSTGRES_DB: ${QUESTIONS_POSTGRES_DB}
+            POSTGRES_USER: ${QUESTIONS_POSTGRES_USER}
+            POSTGRES_PASSWORD: ${QUESTIONS_POSTGRES_PASSWORD}
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        ports:
+            - "5432:5432"
+        volumes:
+            - questions_postgres_data:/var/lib/postgresql
 
-  game-postgres:
-    image: postgres:18
-    container_name: quiz-rush-game-postgres
-    environment:
-      POSTGRES_DB: ${GAME_POSTGRES_DB}
-      POSTGRES_USER: ${GAME_POSTGRES_USER}
-      POSTGRES_PASSWORD: ${GAME_POSTGRES_PASSWORD}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    ports:
-      - "5433:5432"
-    volumes:
-      - game_postgres_data:/var/lib/postgresql
+    game-postgres:
+        image: postgres:18
+        container_name: quiz-rush-game-postgres
+        environment:
+            POSTGRES_DB: ${GAME_POSTGRES_DB}
+            POSTGRES_USER: ${GAME_POSTGRES_USER}
+            POSTGRES_PASSWORD: ${GAME_POSTGRES_PASSWORD}
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        ports:
+            - "5433:5432"
+        volumes:
+            - game_postgres_data:/var/lib/postgresql
 
-  questions-backend:
-    image: golang:1.25
-    container_name: quiz-rush-questions-backend
-    working_dir: /app
-    volumes:
-      - ./questions-backend:/app
-    command: go run ./cmd/server
-    env_file:
-      - questions-backend/.env
-    environment:
-      DATABASE_URL: postgres://${QUESTIONS_POSTGRES_USER}:${QUESTIONS_POSTGRES_PASSWORD}@questions-postgres:5432/${QUESTIONS_POSTGRES_DB}?sslmode=disable
-      PORT: "8080"
-    ports:
-      - "8081:8080"
-    depends_on:
-      questions-postgres:
-        condition: service_healthy
+    questions-backend:
+        image: golang:1.25
+        container_name: quiz-rush-questions-backend
+        working_dir: /app
+        volumes:
+            - ./questions-backend:/app
+        command: go run ./cmd/server
+        env_file:
+            - questions-backend/.env
+        environment:
+            DATABASE_URL: postgres://${QUESTIONS_POSTGRES_USER}:${QUESTIONS_POSTGRES_PASSWORD}@questions-postgres:5432/${QUESTIONS_POSTGRES_DB}?sslmode=disable
+            PORT: "8080"
+        ports:
+            - "8081:8080"
+        depends_on:
+            questions-postgres:
+                condition: service_healthy
 
-  game-backend:
-    image: golang:1.25
-    container_name: quiz-rush-game-backend
-    working_dir: /app
-    environment:
-      DATABASE_URL: postgres://${GAME_POSTGRES_USER}:${GAME_POSTGRES_PASSWORD}@game-postgres:5432/${GAME_POSTGRES_DB}?sslmode=disable
-      PORT: "8080"
-      QUESTIONS_API_BASE_URL: http://questions-backend:8080
-    volumes:
-      - ./game-backend:/app
-    command: go run ./cmd/server
-    env_file:
-      - game-backend/.env
-    ports:
-      - "8080:8080"
-    depends_on:
-      game-postgres:
-        condition: service_healthy
-      questions-backend:
-        condition: service_started
+    game-backend:
+        image: golang:1.25
+        container_name: quiz-rush-game-backend
+        working_dir: /app
+        environment:
+            DATABASE_URL: postgres://${GAME_POSTGRES_USER}:${GAME_POSTGRES_PASSWORD}@game-postgres:5432/${GAME_POSTGRES_DB}?sslmode=disable
+            PORT: "8080"
+            QUESTIONS_API_BASE_URL: http://questions-backend:8080
+        volumes:
+            - ./game-backend:/app
+        command: go run ./cmd/server
+        env_file:
+            - game-backend/.env
+        depends_on:
+            game-postgres:
+                condition: service_healthy
+            questions-backend:
+                condition: service_started
 
-  frontend:
-    container_name: quiz-rush-frontend
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    env_file:
-      - frontend/.env
-    ports:
-      - "5173:5173"
-    depends_on:
-      game-backend:
-        condition: service_started
+    frontend:
+        container_name: quiz-rush-frontend
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+        env_file:
+            - frontend/.env
+        ports:
+            - "80:80"
+        depends_on:
+            game-backend:
+                condition: service_started
 
 volumes:
-  questions_postgres_data:
-  game_postgres_data:
-  frontend_node_modules:
-  frontend_pnpm_store:
+    questions_postgres_data:
+    game_postgres_data:
+    frontend_node_modules:
+    frontend_pnpm_store:
