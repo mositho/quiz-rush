@@ -1,72 +1,65 @@
 services:
-    game-postgres:
-        image: postgres:18
-        container_name: quiz-rush-game-postgres
-        environment:
-            POSTGRES_DB: ${GAME_POSTGRES_DB}
-            POSTGRES_USER: ${GAME_POSTGRES_USER}
-            POSTGRES_PASSWORD: ${GAME_POSTGRES_PASSWORD}
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-            interval: 5s
-            timeout: 5s
-            retries: 10
-        ports:
-            - "5433:5432"
-        volumes:
-            - game_postgres_data:/var/lib/postgresql
+  game-postgres:
+    image: postgres:18
+    container_name: quiz-rush-game-postgres
+    environment:
+      POSTGRES_DB: quizrush_game
+      POSTGRES_USER: quizrush_game
+      POSTGRES_PASSWORD: ${GAME_POSTGRES_PASSWORD:-quizrush_game}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - game_postgres_data:/var/lib/postgresql
 
-    questions-backend:
-        image: golang:1.25
-        container_name: quiz-rush-questions-backend
-        working_dir: /app
-        volumes:
-            - ./questions-backend:/app
-        command: go run ./cmd/server
-        env_file:
-            - questions-backend/.env
-        environment:
-            DATABASE_URL: postgres://${QUESTIONS_POSTGRES_USER}:${QUESTIONS_POSTGRES_PASSWORD}@questions-postgres:5432/${QUESTIONS_POSTGRES_DB}?sslmode=disable
-            PORT: "8080"
-        ports:
-            - "8081:8080"
-        depends_on:
-            questions-postgres:
-                condition: service_healthy
+  questions-backend:
+    image: golang:1.25
+    container_name: quiz-rush-questions-backend
+    working_dir: /app
+    volumes:
+      - ./questions-backend:/app
+    command: go run ./cmd/server
+    environment:
+      DATABASE_URL: postgres://quizrush_questions:${QUESTIONS_POSTGRES_PASSWORD:-quizrush_questions}@questions-postgres:5432/quizrush_questions?sslmode=disable
+      PORT: "${QUESTIONS_BACKEND_PORT:-8080}"
+      CORS_ALLOWED_ORIGIN: "${CORS_ALLOWED_ORIGIN-}"
+    ports:
+      - "${QUESTIONS_BACKEND_HOST_PORT:-8081}:${QUESTIONS_BACKEND_PORT:-8080}"
 
-    game-backend:
-        image: golang:1.25
-        container_name: quiz-rush-game-backend
-        working_dir: /app
-        environment:
-            DATABASE_URL: postgres://${GAME_POSTGRES_USER}:${GAME_POSTGRES_PASSWORD}@game-postgres:5432/${GAME_POSTGRES_DB}?sslmode=disable
-            PORT: "8080"
-            QUESTIONS_API_BASE_URL: http://questions-backend:8080
-        volumes:
-            - ./game-backend:/app
-        command: go run ./cmd/server
-        env_file:
-            - game-backend/.env
-        depends_on:
-            game-postgres:
-                condition: service_healthy
-            questions-backend:
-                condition: service_started
+  game-backend:
+    image: golang:1.25
+    container_name: quiz-rush-game-backend
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgres://quizrush_game:${GAME_POSTGRES_PASSWORD:-quizrush_game}@game-postgres:5432/quizrush_game?sslmode=disable
+      PORT: "${GAME_BACKEND_PORT:-8080}"
+      CORS_ALLOWED_ORIGIN: "${CORS_ALLOWED_ORIGIN-}"
+      QUESTIONS_API_BASE_URL: ${QUESTIONS_API_BASE_URL:-http://questions-backend:8080}
+    volumes:
+      - ./game-backend:/app
+    command: go run ./cmd/server
+    ports:
+      - "${GAME_BACKEND_HOST_PORT:-8080}:${GAME_BACKEND_PORT:-8080}"
+    depends_on:
+      game-postgres:
+        condition: service_healthy
+      questions-backend:
+        condition: service_started
 
-    frontend:
-        container_name: quiz-rush-frontend
-        build:
-            context: ./frontend
-            dockerfile: Dockerfile
-        env_file:
-            - frontend/.env
-        ports:
-            - "80:80"
-        depends_on:
-            game-backend:
-                condition: service_started
+  frontend:
+    container_name: quiz-rush-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    env_file:
+      - frontend/.env
+    ports:
+      - "80:80"
+    depends_on:
+      game-backend:
+        condition: service_started
 
 volumes:
-    game_postgres_data:
-    frontend_node_modules:
-    frontend_pnpm_store:
+  game_postgres_data:
