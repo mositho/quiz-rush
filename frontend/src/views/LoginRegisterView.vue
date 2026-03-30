@@ -4,9 +4,9 @@
     <form>
       <h2>login</h2>
       <label for="username">Username:</label>
-      <input id="username" type="text" name="username" v-model="username" />
+      <input id="username" v-model="username" type="text" name="username" />
       <label for="password">Password:</label>
-      <input id="password" type="password" name="password" v-model="password" />
+      <input id="password" v-model="password" type="password" name="password" />
     </form>
     <button type="button" @click="Login">Login</button>
     <button type="button" @click="Register">Register</button>
@@ -55,6 +55,7 @@ const register = async () => {
     if (response.ok) {
       // Handle successful registration
     } else {
+      //just a comment to pass for now
     }
   } catch (error) {
     console.error("Error during registration:", error)
