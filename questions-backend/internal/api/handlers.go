@@ -25,21 +25,16 @@ func (h *Handler) GetPackages(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetQuestionsByPackage(w http.ResponseWriter, r *http.Request) {
-	_ = chi.URLParam(r, "slug")
-	writeJSON(w, http.StatusOK, map[string]any{})
+	slug := chi.URLParam(r, "slug")
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"packageSlug": slug,
+		"questions":   []any{},
+	})
 }
 
-func (h *Handler) CreateResult(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusCreated, map[string]string{"status": "created"})
-}
-
-func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
-	_ = chi.URLParam(r, "slug")
-	writeJSON(w, http.StatusOK, []any{})
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) {
+func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(payload)
 }

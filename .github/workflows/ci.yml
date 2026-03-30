@@ -35,12 +35,12 @@ jobs:
       - name: Run Prettier check
         run: pnpm format:check
 
-  backend:
-    name: Backend Unit Tests
+  questions_backend:
+    name: Questions Backend Unit Tests
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: questions-backend
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -48,7 +48,25 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: backend/go.mod
+          go-version-file: questions-backend/go.mod
+
+      - name: Run tests
+        run: go test ./...
+
+  game_backend:
+    name: Game Backend Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: game-backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: game-backend/go.mod
 
       - name: Run tests
         run: go test ./...

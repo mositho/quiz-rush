@@ -6,15 +6,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"quiz-rush/backend/internal/api"
+	"quiz-rush/questions-backend/internal/api"
 )
 
 func TestHealthReturnsOKStatusJSON(t *testing.T) {
-	h := api.NewHandler(nil)
+	router := api.NewRouter(nil)
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rr := httptest.NewRecorder()
 
-	h.Health(rr, req)
+	router.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, rr.Code)

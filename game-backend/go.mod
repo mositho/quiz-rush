@@ -1,4 +1,4 @@
-module quiz-rush/backend
+module quiz-rush/game-backend
 
 go 1.25.0
 
