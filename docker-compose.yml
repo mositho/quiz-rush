@@ -1,21 +1,4 @@
 services:
-    questions-postgres:
-        image: postgres:18
-        container_name: quiz-rush-questions-postgres
-        environment:
-            POSTGRES_DB: ${QUESTIONS_POSTGRES_DB}
-            POSTGRES_USER: ${QUESTIONS_POSTGRES_USER}
-            POSTGRES_PASSWORD: ${QUESTIONS_POSTGRES_PASSWORD}
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-            interval: 5s
-            timeout: 5s
-            retries: 10
-        ports:
-            - "5432:5432"
-        volumes:
-            - questions_postgres_data:/var/lib/postgresql
-
     game-postgres:
         image: postgres:18
         container_name: quiz-rush-game-postgres
@@ -84,7 +67,6 @@ services:
                 condition: service_started
 
 volumes:
-    questions_postgres_data:
     game_postgres_data:
     frontend_node_modules:
     frontend_pnpm_store:
