@@ -20,4 +20,3 @@ questions-backend/bin/
 # pnpm store
 .pnpm-store/
 */.pnpm-store/
-.env
