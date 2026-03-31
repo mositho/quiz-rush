@@ -44,6 +44,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 func findMigrationsDir() (string, error) {
 	candidates := []string{
 		"game-backend/migrations",
+		"../migrations",
 		"migrations",
 	}
 

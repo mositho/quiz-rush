@@ -93,3 +93,75 @@ func TestQuitSessionRouteIsRegistered(t *testing.T) {
 		t.Fatal("unexpected status code")
 	}
 }
+
+func TestLinkAccountRouteIsRegistered(t *testing.T) {
+	router := api.NewRouter(nil, nil)
+	request := httptest.NewRequest(http.MethodPost, "/api/game/sessions/session-123/link-account", nil)
+	responseRecorder := httptest.NewRecorder()
+
+	router.ServeHTTP(responseRecorder, request)
+
+	if responseRecorder.Code != http.StatusServiceUnavailable {
+		t.Fatal("unexpected status code")
+	}
+}
+
+func TestGetScoreRouteIsRegistered(t *testing.T) {
+	router := api.NewRouter(nil, nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/game/scores/score-123", nil)
+	responseRecorder := httptest.NewRecorder()
+
+	router.ServeHTTP(responseRecorder, request)
+
+	if responseRecorder.Code != http.StatusServiceUnavailable {
+		t.Fatal("unexpected status code")
+	}
+}
+
+func TestGetLeaderboardRouteIsRegistered(t *testing.T) {
+	router := api.NewRouter(nil, nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/game/leaderboards", nil)
+	responseRecorder := httptest.NewRecorder()
+
+	router.ServeHTTP(responseRecorder, request)
+
+	if responseRecorder.Code != http.StatusServiceUnavailable {
+		t.Fatal("unexpected status code")
+	}
+}
+
+func TestGetCurrentUserRouteIsRegistered(t *testing.T) {
+	router := api.NewRouter(nil, nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/game/users/me", nil)
+	responseRecorder := httptest.NewRecorder()
+
+	router.ServeHTTP(responseRecorder, request)
+
+	if responseRecorder.Code != http.StatusServiceUnavailable {
+		t.Fatal("unexpected status code")
+	}
+}
+
+func TestGetUserScoresRouteIsRegistered(t *testing.T) {
+	router := api.NewRouter(nil, nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/game/users/user_123/scores", nil)
+	responseRecorder := httptest.NewRecorder()
+
+	router.ServeHTTP(responseRecorder, request)
+
+	if responseRecorder.Code != http.StatusServiceUnavailable {
+		t.Fatal("unexpected status code")
+	}
+}
+
+func TestGetUserStatsRouteIsRegistered(t *testing.T) {
+	router := api.NewRouter(nil, nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/game/users/user_123/stats", nil)
+	responseRecorder := httptest.NewRecorder()
+
+	router.ServeHTTP(responseRecorder, request)
+
+	if responseRecorder.Code != http.StatusServiceUnavailable {
+		t.Fatal("unexpected status code")
+	}
+}
