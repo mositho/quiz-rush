@@ -50,11 +50,11 @@ jobs:
               with:
                   go-version-file: questions-backend/go.mod
 
-            - name: Install golangci-lint
-              run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
             - name: Run golangci-lint
-              run: golangci-lint run --timeout=5m
+              uses: golangci/golangci-lint-action@v6
+              with:
+                  working-directory: questions-backend
+                  args: --timeout=5m
 
             - name: Run tests
               run: go test ./...
@@ -74,11 +74,11 @@ jobs:
               with:
                   go-version-file: game-backend/go.mod
 
-            - name: Install golangci-lint
-              run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
             - name: Run golangci-lint
-              run: golangci-lint run --timeout=5m
+              uses: golangci/golangci-lint-action@v6
+              with:
+                  working-directory: game-backend
+                  args: --timeout=5m
 
             - name: Run tests
               run: go test ./...
