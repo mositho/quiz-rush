@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"quiz-rush/game-backend/internal/httpjson"
@@ -15,10 +16,9 @@ import (
 )
 
 type Handler struct {
-	db              *pgxpool.Pool
-	questionsClient *questionsapi.Client
-	service         *Service
-	repository      *sessionRepository
+	db         *pgxpool.Pool
+	service    *Service
+	repository *sessionRepository
 }
 
 type startSessionRequest struct {
@@ -53,12 +53,91 @@ type answerResponse struct {
 	Result  AnswerResult    `json:"result"`
 }
 
+type publicUserResponse struct {
+	PublicUserID string `json:"publicUserId"`
+	DisplayName  string `json:"displayName"`
+}
+
+type scoreResponse struct {
+	ScoreID                string                `json:"scoreId"`
+	SessionID              string                `json:"sessionId"`
+	FinishedAt             string                `json:"finishedAt"`
+	FinishReason           FinishReason          `json:"finishReason"`
+	Score                  int                   `json:"score"`
+	CorrectQuestions       int                   `json:"correctQuestions"`
+	WrongQuestions         int                   `json:"wrongQuestions"`
+	AnsweredQuestions      int                   `json:"answeredQuestions"`
+	TotalQuestions         int                   `json:"totalQuestions"`
+	DurationSeconds        int                   `json:"durationSeconds"`
+	PlayedMs               int64                 `json:"playedMs"`
+	SelectedQuestionSetIDs []string              `json:"selectedQuestionSetIds"`
+	ConfigurationKey       string                `json:"configurationKey"`
+	QuestionResults        []ScoreQuestionResult `json:"questionResults"`
+	Player                 *publicUserResponse   `json:"player,omitempty"`
+}
+
+type scoreSummaryResponse struct {
+	ScoreID                string       `json:"scoreId"`
+	SessionID              string       `json:"sessionId"`
+	FinishedAt             string       `json:"finishedAt"`
+	FinishReason           FinishReason `json:"finishReason"`
+	Score                  int          `json:"score"`
+	CorrectQuestions       int          `json:"correctQuestions"`
+	WrongQuestions         int          `json:"wrongQuestions"`
+	AnsweredQuestions      int          `json:"answeredQuestions"`
+	TotalQuestions         int          `json:"totalQuestions"`
+	DurationSeconds        int          `json:"durationSeconds"`
+	PlayedMs               int64        `json:"playedMs"`
+	SelectedQuestionSetIDs []string     `json:"selectedQuestionSetIds"`
+	ConfigurationKey       string       `json:"configurationKey"`
+}
+
+type userScoresResponse struct {
+	PublicUserID string                 `json:"publicUserId"`
+	DisplayName  string                 `json:"displayName"`
+	Scores       []scoreSummaryResponse `json:"scores"`
+}
+
+type userStatsPayload struct {
+	GamesPlayed           int     `json:"gamesPlayed"`
+	BestScore             int     `json:"bestScore"`
+	AverageScore          float64 `json:"averageScore"`
+	TotalCorrectQuestions int     `json:"totalCorrectQuestions"`
+}
+
+type userStatsResponse struct {
+	PublicUserID string           `json:"publicUserId"`
+	DisplayName  string           `json:"displayName"`
+	Stats        userStatsPayload `json:"stats"`
+}
+
+type leaderboardEntryResponse struct {
+	Rank             int                `json:"rank"`
+	ScoreID          string             `json:"scoreId"`
+	Score            int                `json:"score"`
+	FinishedAt       string             `json:"finishedAt"`
+	ConfigurationKey string             `json:"configurationKey"`
+	Player           publicUserResponse `json:"player"`
+}
+
+type leaderboardResponse struct {
+	ConfigurationKey *string                    `json:"configurationKey,omitempty"`
+	Entries          []leaderboardEntryResponse `json:"entries"`
+}
+
+type linkAccountResponse struct {
+	SessionID    string `json:"sessionId"`
+	ScoreID      string `json:"scoreId"`
+	PublicUserID string `json:"publicUserId"`
+	DisplayName  string `json:"displayName"`
+	Linked       bool   `json:"linked"`
+}
+
 func NewHandler(db *pgxpool.Pool, questionsClient *questionsapi.Client) *Handler {
 	return &Handler{
-		db:              db,
-		questionsClient: questionsClient,
-		service:         NewService(questionsClient),
-		repository:      newSessionRepository(db),
+		db:         db,
+		service:    NewService(questionsClient),
+		repository: newSessionRepository(db),
 	}
 }
 
@@ -96,12 +175,6 @@ func (h *Handler) StartSession(w http.ResponseWriter, r *http.Request) {
 		isAnonymous = false
 	}
 
-	if isAnonymous {
-		deadline := now.Add(15 * time.Minute)
-		saveDeadlineAt = &deadline
-		session.SaveDeadlineAt = saveDeadlineAt
-	}
-
 	if err := h.repository.CreateSession(r.Context(), session, ownerProfileID, isAnonymous, saveDeadlineAt); err != nil {
 		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to create session"})
 		return
@@ -117,7 +190,7 @@ func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	session, _, _, err := h.repository.LoadSession(r.Context(), chi.URLParam(r, "sessionId"))
+	session, ownerProfileID, isAnonymous, err := h.repository.LoadSession(r.Context(), chi.URLParam(r, "sessionId"))
 	if errors.Is(err, ErrSessionNotFound) {
 		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "session not found"})
 		return
@@ -126,8 +199,22 @@ func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
 		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
 		return
 	}
+	authenticatedProfileID, err := h.authenticatedProfileID(r)
+	if err != nil {
+		httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		return
+	}
+	if err := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous); err != nil {
+		statusCode := http.StatusForbidden
+		if errors.Is(err, errAuthenticationRequired) {
+			statusCode = http.StatusUnauthorized
+		}
+		httpjson.Write(w, statusCode, map[string]string{"error": err.Error()})
+		return
+	}
 
 	session.Sync(now)
+	h.applyAnonymousSaveDeadline(session, now)
 	if err := h.repository.UpdateSession(r.Context(), session); err != nil {
 		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
 		return
@@ -158,6 +245,19 @@ func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
 		return
 	}
+	authenticatedProfileID, err := h.authenticatedProfileID(r)
+	if err != nil {
+		httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		return
+	}
+	if err := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous); err != nil {
+		statusCode := http.StatusForbidden
+		if errors.Is(err, errAuthenticationRequired) {
+			statusCode = http.StatusUnauthorized
+		}
+		httpjson.Write(w, statusCode, map[string]string{"error": err.Error()})
+		return
+	}
 
 	result, err := session.SubmitAnswer(now, request.SelectedAnswerIndex)
 	if err != nil {
@@ -165,6 +265,7 @@ func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.applyAnonymousSaveDeadline(session, now)
 	if err := h.repository.UpdateSession(r.Context(), session); err != nil {
 		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
 		return
@@ -191,6 +292,214 @@ func (h *Handler) QuitSession(w http.ResponseWriter, r *http.Request) {
 	h.finishWithReason(w, r, FinishReasonQuit)
 }
 
+func (h *Handler) LinkAccount(w http.ResponseWriter, r *http.Request) {
+	if h.repository.db == nil {
+		writeServiceUnavailable(w)
+		return
+	}
+
+	authenticatedProfileID, err := h.authenticatedProfileID(r)
+	if err != nil || authenticatedProfileID == nil {
+		httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": errAuthenticationRequired.Error()})
+		return
+	}
+
+	now := time.Now().UTC()
+	scoreID, err := h.repository.LinkAnonymousSessionScore(r.Context(), chi.URLParam(r, "sessionId"), *authenticatedProfileID, now)
+	if errors.Is(err, ErrSessionNotFound) {
+		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "session not found"})
+		return
+	}
+	if errors.Is(err, ErrSessionNotFinished) {
+		httpjson.Write(w, http.StatusConflict, map[string]string{"error": "session is not finished"})
+		return
+	}
+	if errors.Is(err, ErrSessionExpired) {
+		httpjson.Write(w, http.StatusConflict, map[string]string{"error": "session can no longer be linked"})
+		return
+	}
+	if errors.Is(err, ErrSessionAlreadyLinked) {
+		httpjson.Write(w, http.StatusConflict, map[string]string{"error": "session is already linked"})
+		return
+	}
+	if errors.Is(err, ErrScoreNotFound) {
+		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "score not found"})
+		return
+	}
+	if err != nil {
+		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to link account"})
+		return
+	}
+
+	profile, err := h.repository.GetProfileByID(r.Context(), *authenticatedProfileID)
+	if err != nil {
+		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load linked profile"})
+		return
+	}
+
+	httpjson.Write(w, http.StatusOK, linkAccountResponse{
+		SessionID:    chi.URLParam(r, "sessionId"),
+		ScoreID:      scoreID,
+		PublicUserID: profile.PublicUserID,
+		DisplayName:  profile.DisplayName,
+		Linked:       true,
+	})
+}
+
+func (h *Handler) GetScore(w http.ResponseWriter, r *http.Request) {
+	if h.repository.db == nil {
+		writeServiceUnavailable(w)
+		return
+	}
+
+	score, err := h.repository.GetScore(r.Context(), chi.URLParam(r, "scoreId"))
+	if errors.Is(err, ErrScoreNotFound) {
+		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "score not found"})
+		return
+	}
+	if err != nil {
+		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load score"})
+		return
+	}
+
+	httpjson.Write(w, http.StatusOK, buildScoreResponse(score))
+}
+
+func (h *Handler) GetUserScores(w http.ResponseWriter, r *http.Request) {
+	if h.repository.db == nil {
+		writeServiceUnavailable(w)
+		return
+	}
+
+	profile, scores, err := h.repository.ListScoresByPublicUserID(r.Context(), chi.URLParam(r, "publicUserId"))
+	if errors.Is(err, ErrProfileNotFound) {
+		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "user not found"})
+		return
+	}
+	if err != nil {
+		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load user scores"})
+		return
+	}
+
+	summaries := make([]scoreSummaryResponse, 0, len(scores))
+	for _, score := range scores {
+		summaries = append(summaries, buildScoreSummaryResponse(score))
+	}
+
+	httpjson.Write(w, http.StatusOK, userScoresResponse{
+		PublicUserID: profile.PublicUserID,
+		DisplayName:  profile.DisplayName,
+		Scores:       summaries,
+	})
+}
+
+func (h *Handler) GetUserStats(w http.ResponseWriter, r *http.Request) {
+	if h.repository.db == nil {
+		writeServiceUnavailable(w)
+		return
+	}
+
+	profile, stats, err := h.repository.GetUserStatsByPublicUserID(r.Context(), chi.URLParam(r, "publicUserId"))
+	if errors.Is(err, ErrProfileNotFound) {
+		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "user not found"})
+		return
+	}
+	if err != nil {
+		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load user stats"})
+		return
+	}
+
+	httpjson.Write(w, http.StatusOK, userStatsResponse{
+		PublicUserID: profile.PublicUserID,
+		DisplayName:  profile.DisplayName,
+		Stats: userStatsPayload{
+			GamesPlayed:           stats.GamesPlayed,
+			BestScore:             stats.BestScore,
+			AverageScore:          stats.AverageScore,
+			TotalCorrectQuestions: stats.TotalCorrectQuestions,
+		},
+	})
+}
+
+func (h *Handler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
+	if h.repository.db == nil {
+		writeServiceUnavailable(w)
+		return
+	}
+
+	authenticatedProfileID, err := h.authenticatedProfileID(r)
+	if err != nil || authenticatedProfileID == nil {
+		httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": errAuthenticationRequired.Error()})
+		return
+	}
+
+	profile, err := h.repository.GetProfileByID(r.Context(), *authenticatedProfileID)
+	if errors.Is(err, ErrProfileNotFound) {
+		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "user not found"})
+		return
+	}
+	if err != nil {
+		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load user"})
+		return
+	}
+
+	httpjson.Write(w, http.StatusOK, publicUserResponse{
+		PublicUserID: profile.PublicUserID,
+		DisplayName:  profile.DisplayName,
+	})
+}
+
+func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
+	if h.repository.db == nil {
+		writeServiceUnavailable(w)
+		return
+	}
+
+	var configurationKey *string
+	if value := r.URL.Query().Get("configurationKey"); value != "" {
+		configurationKey = &value
+	}
+
+	limit := 20
+	if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+		parsedLimit, err := strconv.Atoi(rawLimit)
+		if err != nil || parsedLimit <= 0 {
+			httpjson.Write(w, http.StatusBadRequest, map[string]string{"error": "invalid limit"})
+			return
+		}
+		if parsedLimit > 100 {
+			parsedLimit = 100
+		}
+		limit = parsedLimit
+	}
+
+	entries, err := h.repository.ListLeaderboard(r.Context(), configurationKey, limit)
+	if err != nil {
+		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load leaderboard"})
+		return
+	}
+
+	responseEntries := make([]leaderboardEntryResponse, 0, len(entries))
+	for _, entry := range entries {
+		responseEntries = append(responseEntries, leaderboardEntryResponse{
+			Rank:             entry.Rank,
+			ScoreID:          entry.ScoreID,
+			Score:            entry.Score,
+			FinishedAt:       entry.FinishedAt.UTC().Format(time.RFC3339Nano),
+			ConfigurationKey: entry.ConfigurationKey,
+			Player: publicUserResponse{
+				PublicUserID: entry.Player.PublicUserID,
+				DisplayName:  entry.Player.DisplayName,
+			},
+		})
+	}
+
+	httpjson.Write(w, http.StatusOK, leaderboardResponse{
+		ConfigurationKey: configurationKey,
+		Entries:          responseEntries,
+	})
+}
+
 func (h *Handler) finishWithReason(w http.ResponseWriter, r *http.Request, reason FinishReason) {
 	if h.repository.db == nil {
 		writeServiceUnavailable(w)
@@ -207,8 +516,22 @@ func (h *Handler) finishWithReason(w http.ResponseWriter, r *http.Request, reaso
 		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
 		return
 	}
+	authenticatedProfileID, err := h.authenticatedProfileID(r)
+	if err != nil {
+		httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		return
+	}
+	if err := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous); err != nil {
+		statusCode := http.StatusForbidden
+		if errors.Is(err, errAuthenticationRequired) {
+			statusCode = http.StatusUnauthorized
+		}
+		httpjson.Write(w, statusCode, map[string]string{"error": err.Error()})
+		return
+	}
 
 	session.Finish(now, reason)
+	h.applyAnonymousSaveDeadline(session, now)
 	if err := h.repository.UpdateSession(r.Context(), session); err != nil {
 		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
 		return
@@ -223,11 +546,15 @@ func (h *Handler) finishWithReason(w http.ResponseWriter, r *http.Request, reaso
 
 func (h *Handler) persistScore(r *http.Request, session *Session, ownerProfileID *string, isAnonymous bool) error {
 	scoreResult := session.ScoreResult()
+	finishedAt := time.Now().UTC()
+	if session.FinishedAt != nil {
+		finishedAt = session.FinishedAt.UTC()
+	}
 
 	var (
-		isSaved  bool
-		isPublic bool
-		savedAt  *time.Time
+		isSaved   bool
+		isPublic  bool
+		savedAt   *time.Time
 		expiresAt *time.Time
 	)
 	if isAnonymous {
@@ -239,7 +566,49 @@ func (h *Handler) persistScore(r *http.Request, session *Session, ownerProfileID
 		savedAt = &now
 	}
 
-	return h.repository.CreateScore(r.Context(), session.ID, ownerProfileID, scoreResult, isSaved, isPublic, savedAt, expiresAt)
+	return h.repository.CreateScore(r.Context(), session.ID, ownerProfileID, scoreResult, finishedAt, isSaved, isPublic, savedAt, expiresAt)
+}
+
+var (
+	errAuthenticationRequired = errors.New("authentication required")
+	errSessionForbidden       = errors.New("forbidden")
+)
+
+func (h *Handler) authenticatedProfileID(r *http.Request) (*string, error) {
+	user, ok := middleware.AuthenticatedUserFromContext(r.Context())
+	if !ok {
+		return nil, nil
+	}
+
+	profileID, err := h.repository.EnsureUserProfile(r.Context(), user)
+	if err != nil {
+		return nil, errAuthenticationRequired
+	}
+
+	return &profileID, nil
+}
+
+func authorizeSessionAccess(authenticatedProfileID *string, ownerProfileID *string, isAnonymous bool) error {
+	if isAnonymous {
+		return nil
+	}
+	if authenticatedProfileID == nil {
+		return errAuthenticationRequired
+	}
+	if ownerProfileID == nil || *ownerProfileID != *authenticatedProfileID {
+		return errSessionForbidden
+	}
+
+	return nil
+}
+
+func (h *Handler) applyAnonymousSaveDeadline(session *Session, now time.Time) {
+	if session.SaveDeadlineAt != nil || session.Status != SessionStatusFinished {
+		return
+	}
+
+	deadline := now.Add(15 * time.Minute)
+	session.SaveDeadlineAt = &deadline
 }
 
 func buildSessionResponse(session *Session, now time.Time) sessionResponse {
@@ -267,6 +636,51 @@ func buildSessionResponse(session *Session, now time.Time) sessionResponse {
 		WrongQuestions:         session.WrongQuestions,
 		CurrentScore:           session.CurrentScore,
 		CurrentQuestion:        currentQuestion,
+	}
+}
+
+func buildScoreResponse(score *storedScore) scoreResponse {
+	response := scoreResponse{
+		ScoreID:                score.ScoreID,
+		SessionID:              score.SessionID,
+		FinishedAt:             score.FinishedAt.UTC().Format(time.RFC3339Nano),
+		FinishReason:           score.FinishReason,
+		Score:                  score.Score,
+		CorrectQuestions:       score.CorrectQuestions,
+		WrongQuestions:         score.WrongQuestions,
+		AnsweredQuestions:      score.AnsweredQuestions,
+		TotalQuestions:         score.TotalQuestions,
+		DurationSeconds:        score.DurationSeconds,
+		PlayedMs:               score.PlayedMs,
+		SelectedQuestionSetIDs: score.SelectedQuestionSetIDs,
+		ConfigurationKey:       score.ConfigurationKey,
+		QuestionResults:        score.QuestionResults,
+	}
+	if score.Player != nil {
+		response.Player = &publicUserResponse{
+			PublicUserID: score.Player.PublicUserID,
+			DisplayName:  score.Player.DisplayName,
+		}
+	}
+
+	return response
+}
+
+func buildScoreSummaryResponse(score storedScore) scoreSummaryResponse {
+	return scoreSummaryResponse{
+		ScoreID:                score.ScoreID,
+		SessionID:              score.SessionID,
+		FinishedAt:             score.FinishedAt.UTC().Format(time.RFC3339Nano),
+		FinishReason:           score.FinishReason,
+		Score:                  score.Score,
+		CorrectQuestions:       score.CorrectQuestions,
+		WrongQuestions:         score.WrongQuestions,
+		AnsweredQuestions:      score.AnsweredQuestions,
+		TotalQuestions:         score.TotalQuestions,
+		DurationSeconds:        score.DurationSeconds,
+		PlayedMs:               score.PlayedMs,
+		SelectedQuestionSetIDs: score.SelectedQuestionSetIDs,
+		ConfigurationKey:       score.ConfigurationKey,
 	}
 }
 

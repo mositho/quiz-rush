@@ -11,15 +11,60 @@ import (
 
 	"quiz-rush/game-backend/internal/middleware"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var ErrSessionNotFound = errors.New("session not found")
+var ErrScoreNotFound = errors.New("score not found")
+var ErrProfileNotFound = errors.New("profile not found")
+var ErrSessionExpired = errors.New("session expired")
+var ErrSessionNotFinished = errors.New("session not finished")
+var ErrSessionAlreadyLinked = errors.New("session already linked")
 
 type sessionRepository struct {
 	db *pgxpool.Pool
+}
+
+type userProfile struct {
+	ID           string
+	PublicUserID string
+	DisplayName  string
+}
+
+type storedScore struct {
+	ScoreID                string
+	SessionID              string
+	FinishedAt             time.Time
+	FinishReason           FinishReason
+	Score                  int
+	CorrectQuestions       int
+	WrongQuestions         int
+	AnsweredQuestions      int
+	TotalQuestions         int
+	DurationSeconds        int
+	PlayedMs               int64
+	SelectedQuestionSetIDs []string
+	ConfigurationKey       string
+	QuestionResults        []ScoreQuestionResult
+	Player                 *userProfile
+}
+
+type leaderboardEntry struct {
+	Rank             int
+	ScoreID          string
+	Score            int
+	FinishedAt       time.Time
+	ConfigurationKey string
+	Player           userProfile
+}
+
+type userStats struct {
+	GamesPlayed           int
+	BestScore             int
+	AverageScore          float64
+	TotalCorrectQuestions int
 }
 
 type dbTX interface {
@@ -59,6 +104,48 @@ func (r *sessionRepository) EnsureUserProfile(ctx context.Context, user middlewa
 	}
 
 	return id, nil
+}
+
+func (r *sessionRepository) GetProfileByID(ctx context.Context, id string) (*userProfile, error) {
+	row := r.db.QueryRow(
+		ctx,
+		`
+		select id, public_user_id, display_name
+		from user_profiles
+		where id = $1
+		`,
+		id,
+	)
+
+	var profile userProfile
+	if err := row.Scan(&profile.ID, &profile.PublicUserID, &profile.DisplayName); errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrProfileNotFound
+	} else if err != nil {
+		return nil, fmt.Errorf("get profile by id: %w", err)
+	}
+
+	return &profile, nil
+}
+
+func (r *sessionRepository) GetProfileByPublicUserID(ctx context.Context, publicUserID string) (*userProfile, error) {
+	row := r.db.QueryRow(
+		ctx,
+		`
+		select id, public_user_id, display_name
+		from user_profiles
+		where public_user_id = $1
+		`,
+		publicUserID,
+	)
+
+	var profile userProfile
+	if err := row.Scan(&profile.ID, &profile.PublicUserID, &profile.DisplayName); errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrProfileNotFound
+	} else if err != nil {
+		return nil, fmt.Errorf("get profile by public user id: %w", err)
+	}
+
+	return &profile, nil
 }
 
 func (r *sessionRepository) CreateSession(
@@ -139,6 +226,7 @@ func (r *sessionRepository) CreateScore(
 	sessionID string,
 	ownerProfileID *string,
 	scoreResult ScoreResult,
+	finishedAt time.Time,
 	isSaved bool,
 	isPublic bool,
 	savedAt *time.Time,
@@ -186,7 +274,7 @@ func (r *sessionRepository) CreateScore(
 		ownerProfileID,
 		isSaved,
 		isPublic,
-		time.Now().UTC(),
+		finishedAt,
 		savedAt,
 		expiresAt,
 		string(scoreResult.FinishReason),
@@ -206,6 +294,390 @@ func (r *sessionRepository) CreateScore(
 	}
 
 	return nil
+}
+
+func (r *sessionRepository) LinkAnonymousSessionScore(
+	ctx context.Context,
+	sessionID string,
+	ownerProfileID string,
+	now time.Time,
+) (string, error) {
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return "", fmt.Errorf("begin link session score transaction: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	var (
+		currentOwnerProfileID *string
+		isAnonymous           bool
+		status                string
+		saveDeadlineAt        *time.Time
+	)
+	err = tx.QueryRow(
+		ctx,
+		`
+		select owner_profile_id, is_anonymous, status, save_deadline_at
+		from game_sessions
+		where id = $1
+		for update
+		`,
+		sessionID,
+	).Scan(&currentOwnerProfileID, &isAnonymous, &status, &saveDeadlineAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrSessionNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("load session for linking: %w", err)
+	}
+
+	if currentOwnerProfileID != nil {
+		if *currentOwnerProfileID == ownerProfileID {
+			scoreID, err := r.scoreIDBySessionID(ctx, tx, sessionID)
+			if err != nil {
+				return "", err
+			}
+			if err := tx.Commit(ctx); err != nil {
+				return "", fmt.Errorf("commit idempotent link session score transaction: %w", err)
+			}
+			return scoreID, nil
+		}
+		return "", ErrSessionAlreadyLinked
+	}
+	if SessionStatus(status) != SessionStatusFinished {
+		return "", ErrSessionNotFinished
+	}
+	if !isAnonymous || saveDeadlineAt == nil || now.After(*saveDeadlineAt) {
+		return "", ErrSessionExpired
+	}
+
+	scoreID, err := r.scoreIDBySessionID(ctx, tx, sessionID)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := tx.Exec(
+		ctx,
+		`
+		update game_sessions
+		set
+			owner_profile_id = $2,
+			is_anonymous = false,
+			updated_at = now()
+		where id = $1
+		`,
+		sessionID,
+		ownerProfileID,
+	); err != nil {
+		return "", fmt.Errorf("link session owner: %w", err)
+	}
+
+	if _, err := tx.Exec(
+		ctx,
+		`
+		update game_scores
+		set
+			owner_profile_id = $2,
+			is_saved = true,
+			is_public = true,
+			saved_at = $3,
+			expires_at = null
+		where session_id = $1
+		`,
+		sessionID,
+		ownerProfileID,
+		now,
+	); err != nil {
+		return "", fmt.Errorf("link score owner: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return "", fmt.Errorf("commit link session score transaction: %w", err)
+	}
+
+	return scoreID, nil
+}
+
+func (r *sessionRepository) GetScore(ctx context.Context, scoreID string) (*storedScore, error) {
+	row := r.db.QueryRow(
+		ctx,
+		`
+		select
+			s.id,
+			s.session_id,
+			s.finished_at,
+			s.finish_reason,
+			s.score,
+			s.correct_questions,
+			s.wrong_questions,
+			s.answered_questions,
+			s.total_questions,
+			s.duration_seconds,
+			s.played_ms,
+			s.selected_question_set_ids,
+			s.configuration_key,
+			s.question_results_json,
+			u.id,
+			u.public_user_id,
+			u.display_name
+		from game_scores s
+		join user_profiles u on u.id = s.owner_profile_id
+		where s.id = $1 and s.is_public = true and s.is_saved = true
+		`,
+		scoreID,
+	)
+
+	score, err := scanStoredScoreWithPlayer(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrScoreNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get score: %w", err)
+	}
+
+	return score, nil
+}
+
+func (r *sessionRepository) ListScoresByPublicUserID(ctx context.Context, publicUserID string) (*userProfile, []storedScore, error) {
+	profile, err := r.GetProfileByPublicUserID(ctx, publicUserID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rows, err := r.db.Query(
+		ctx,
+		`
+		select
+			s.id,
+			s.session_id,
+			s.finished_at,
+			s.finish_reason,
+			s.score,
+			s.correct_questions,
+			s.wrong_questions,
+			s.answered_questions,
+			s.total_questions,
+			s.duration_seconds,
+			s.played_ms,
+			s.selected_question_set_ids,
+			s.configuration_key,
+			s.question_results_json
+		from game_scores s
+		where s.owner_profile_id = $1 and s.is_public = true and s.is_saved = true
+		order by s.finished_at desc
+		`,
+		profile.ID,
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("list scores by public user id: %w", err)
+	}
+	defer rows.Close()
+
+	scores := make([]storedScore, 0)
+	for rows.Next() {
+		score, err := scanStoredScoreWithoutPlayer(rows)
+		if err != nil {
+			return nil, nil, err
+		}
+		scores = append(scores, score)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("iterate scores by public user id: %w", err)
+	}
+
+	return profile, scores, nil
+}
+
+func (r *sessionRepository) GetUserStatsByPublicUserID(ctx context.Context, publicUserID string) (*userProfile, userStats, error) {
+	profile, err := r.GetProfileByPublicUserID(ctx, publicUserID)
+	if err != nil {
+		return nil, userStats{}, err
+	}
+
+	row := r.db.QueryRow(
+		ctx,
+		`
+		select
+			count(*),
+			coalesce(max(score), 0),
+			coalesce(avg(score), 0),
+			coalesce(sum(correct_questions), 0)
+		from game_scores
+		where owner_profile_id = $1 and is_public = true and is_saved = true
+		`,
+		profile.ID,
+	)
+
+	var stats userStats
+	if err := row.Scan(&stats.GamesPlayed, &stats.BestScore, &stats.AverageScore, &stats.TotalCorrectQuestions); err != nil {
+		return nil, userStats{}, fmt.Errorf("get user stats by public user id: %w", err)
+	}
+
+	return profile, stats, nil
+}
+
+func (r *sessionRepository) ListLeaderboard(ctx context.Context, configurationKey *string, limit int) ([]leaderboardEntry, error) {
+	query := `
+		select
+			s.id,
+			s.score,
+			s.finished_at,
+			s.configuration_key,
+			u.id,
+			u.public_user_id,
+			u.display_name
+		from game_scores s
+		join user_profiles u on u.id = s.owner_profile_id
+		where s.is_public = true and s.is_saved = true
+	`
+	args := []any{}
+	if configurationKey != nil && *configurationKey != "" {
+		query += ` and s.configuration_key = $1`
+		args = append(args, *configurationKey)
+	}
+	if len(args) == 0 {
+		query += ` order by s.score desc, s.finished_at asc limit $1`
+		args = append(args, limit)
+	} else {
+		query += ` order by s.score desc, s.finished_at asc limit $2`
+		args = append(args, limit)
+	}
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list leaderboard: %w", err)
+	}
+	defer rows.Close()
+
+	entries := make([]leaderboardEntry, 0)
+	rank := 1
+	for rows.Next() {
+		var entry leaderboardEntry
+		if err := rows.Scan(
+			&entry.ScoreID,
+			&entry.Score,
+			&entry.FinishedAt,
+			&entry.ConfigurationKey,
+			&entry.Player.ID,
+			&entry.Player.PublicUserID,
+			&entry.Player.DisplayName,
+		); err != nil {
+			return nil, fmt.Errorf("scan leaderboard entry: %w", err)
+		}
+		entry.Rank = rank
+		rank++
+		entries = append(entries, entry)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate leaderboard entries: %w", err)
+	}
+
+	return entries, nil
+}
+
+func (r *sessionRepository) scoreIDBySessionID(ctx context.Context, tx pgx.Tx, sessionID string) (string, error) {
+	var scoreID string
+	err := tx.QueryRow(
+		ctx,
+		`
+		select id
+		from game_scores
+		where session_id = $1
+		for update
+		`,
+		sessionID,
+	).Scan(&scoreID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrScoreNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("load score by session id: %w", err)
+	}
+
+	return scoreID, nil
+}
+
+func scanStoredScoreWithoutPlayer(rows pgx.Rows) (storedScore, error) {
+	score, err := scanStoredScoreCore(rows, false)
+	if err != nil {
+		return storedScore{}, err
+	}
+
+	return *score, nil
+}
+
+type scoreScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanStoredScoreWithPlayer(scanner scoreScanner) (*storedScore, error) {
+	return scanStoredScoreCore(scanner, true)
+}
+
+func scanStoredScoreCore(scanner scoreScanner, includePlayer bool) (*storedScore, error) {
+	var (
+		score                storedScore
+		finishReason         string
+		selectedQuestionSets []byte
+		questionResultsRaw   []byte
+	)
+
+	if includePlayer {
+		var player userProfile
+		if err := scanner.Scan(
+			&score.ScoreID,
+			&score.SessionID,
+			&score.FinishedAt,
+			&finishReason,
+			&score.Score,
+			&score.CorrectQuestions,
+			&score.WrongQuestions,
+			&score.AnsweredQuestions,
+			&score.TotalQuestions,
+			&score.DurationSeconds,
+			&score.PlayedMs,
+			&selectedQuestionSets,
+			&score.ConfigurationKey,
+			&questionResultsRaw,
+			&player.ID,
+			&player.PublicUserID,
+			&player.DisplayName,
+		); err != nil {
+			return nil, err
+		}
+		score.Player = &player
+	} else {
+		if err := scanner.Scan(
+			&score.ScoreID,
+			&score.SessionID,
+			&score.FinishedAt,
+			&finishReason,
+			&score.Score,
+			&score.CorrectQuestions,
+			&score.WrongQuestions,
+			&score.AnsweredQuestions,
+			&score.TotalQuestions,
+			&score.DurationSeconds,
+			&score.PlayedMs,
+			&selectedQuestionSets,
+			&score.ConfigurationKey,
+			&questionResultsRaw,
+		); err != nil {
+			return nil, err
+		}
+	}
+
+	score.FinishReason = FinishReason(finishReason)
+	if err := json.Unmarshal(selectedQuestionSets, &score.SelectedQuestionSetIDs); err != nil {
+		return nil, fmt.Errorf("unmarshal score selected question set ids: %w", err)
+	}
+	if err := json.Unmarshal(questionResultsRaw, &score.QuestionResults); err != nil {
+		return nil, fmt.Errorf("unmarshal score question results: %w", err)
+	}
+
+	return &score, nil
 }
 
 func insertSessionRow(

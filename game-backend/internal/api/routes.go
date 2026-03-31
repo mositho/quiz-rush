@@ -33,13 +33,26 @@ func NewRouter(db *pgxpool.Pool, authMiddleware func(http.Handler) http.Handler)
 
 	r.Get("/health", Health)
 	r.Route("/api", func(api chi.Router) {
-		api.Route("/game", func(gameRouter chi.Router) {
+		registerGameRoutes := func(gameRouter chi.Router) {
 			gameRouter.Post("/sessions", gameHandler.StartSession)
 			gameRouter.Get("/sessions/{sessionId}", gameHandler.GetSession)
 			gameRouter.Post("/sessions/{sessionId}/answers", gameHandler.SubmitAnswer)
 			gameRouter.Post("/sessions/{sessionId}/finish", gameHandler.FinishSession)
 			gameRouter.Post("/sessions/{sessionId}/quit", gameHandler.QuitSession)
-		})
+			gameRouter.Post("/sessions/{sessionId}/link-account", gameHandler.LinkAccount)
+			gameRouter.Get("/scores/{scoreId}", gameHandler.GetScore)
+			gameRouter.Get("/leaderboards", gameHandler.GetLeaderboard)
+			gameRouter.Get("/users/me", gameHandler.GetCurrentUser)
+			gameRouter.Get("/users/{publicUserId}/scores", gameHandler.GetUserScores)
+			gameRouter.Get("/users/{publicUserId}/stats", gameHandler.GetUserStats)
+		}
+
+		if authMiddleware != nil {
+			api.With(authMiddleware).Route("/game", registerGameRoutes)
+			return
+		}
+
+		api.Route("/game", registerGameRoutes)
 	})
 
 	return r
