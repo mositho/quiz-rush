@@ -16,23 +16,23 @@
 <script setup lang="ts">
 /* eslint-disable no-undef */
 
-import { ref } from "vue"
+import { ref } from "vue";
 
-const username = ref("")
-const password = ref("")
+const username = ref("");
+const password = ref("");
 
 const login = async () => {
   try {
     const response = await fetch("/api/login", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         username: username.value,
-        password: password.value
-      })
-    })
+        password: password.value,
+      }),
+    });
     if (response.ok) {
       // Handle successful login
     } else {
@@ -40,34 +40,34 @@ const login = async () => {
       //Login failed, show error message ask to register or try again
     }
   } catch (error) {
-    console.error("Error during login:", error)
+    console.error("Error during login:", error);
   }
-}
+};
 const register = async () => {
   try {
     const response = await fetch("/api/register", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ username, password })
-    })
+      body: JSON.stringify({ username, password }),
+    });
     if (response.ok) {
       // Handle successful registration
     } else {
       //just a comment to pass for now
     }
   } catch (error) {
-    console.error("Error during registration:", error)
+    console.error("Error during registration:", error);
   }
-}
+};
 
 function Login() {
-  return login()
+  return login();
 }
 
 function Register() {
-  return register()
+  return register();
 }
 </script>
 

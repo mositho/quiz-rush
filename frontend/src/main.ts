@@ -1,13 +1,13 @@
-import { createApp } from "vue"
-import App from "./App.vue"
-import "./assets/styles/index.css"
-import { router } from "./router"
-import { initKeycloak } from "./services/keycloak"
+import { createApp } from "vue";
+import App from "./App.vue";
+import "./assets/styles/index.css";
+import { router } from "./router";
+import { initKeycloak } from "./services/keycloak";
 
 async function bootstrap() {
-  await initKeycloak()
+  await initKeycloak();
 
-  createApp(App).use(router).mount("#app")
+  createApp(App).use(router).mount("#app");
 }
 
-void bootstrap()
+void bootstrap();

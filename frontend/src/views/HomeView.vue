@@ -10,11 +10,7 @@
         <span v-else>Checking session...</span>
       </p>
       <div class="home-view__actions">
-        <button
-          v-if="!authState.authenticated"
-          type="button"
-          @click="handleLogin"
-        >
+        <button v-if="!authState.authenticated" type="button" @click="handleLogin">
           Sign in with Keycloak
         </button>
         <button v-else type="button" @click="handleLogout">Sign out</button>
@@ -24,8 +20,8 @@
     <section class="home-view__panel home-view__panel--wide">
       <h2>Backend Auth Check</h2>
       <p class="home-view__hint">
-        Public request should return 200. Protected request should return 201
-        when signed in and 401 when not signed in.
+        Public request should return 200. Protected request should return 201 when signed in and 401
+        when not signed in.
       </p>
 
       <div class="home-view__actions home-view__actions--stacked">
@@ -51,80 +47,76 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref } from "vue";
 
-import { ApiError, apiFetch } from "../services/api"
-import {
-  authState,
-  loginWithKeycloak,
-  logoutFromKeycloak
-} from "../services/keycloak"
+import { ApiError, apiFetch } from "../services/api";
+import { authState, loginWithKeycloak, logoutFromKeycloak } from "../services/keycloak";
 
 interface LeaderboardResponse {
-  packageSlug: string
-  entries: Array<{ player: string; score: number }>
+  packageSlug: string;
+  entries: Array<{ player: string; score: number }>;
 }
 
 interface CreateResultResponse {
-  status: string
+  status: string;
 }
 
 interface RequestResult {
-  label: string
-  status: number | string
-  body: string
+  label: string;
+  status: number | string;
+  body: string;
 }
 
-const loading = ref(false)
-const lastResult = ref<RequestResult | null>(null)
+const loading = ref(false);
+const lastResult = ref<RequestResult | null>(null);
 
 function handleLogin() {
-  void loginWithKeycloak()
+  void loginWithKeycloak();
 }
 
 function handleLogout() {
-  void logoutFromKeycloak()
+  void logoutFromKeycloak();
 }
 
 async function loadLeaderboard() {
-  loading.value = true
+  loading.value = true;
 
   try {
-    const response = await apiFetch<LeaderboardResponse>("/leaderboard/demo")
+    const response = await apiFetch<LeaderboardResponse>("/leaderboard/demo");
 
     lastResult.value = {
       label: "Public leaderboard request",
       status: 200,
-      body: JSON.stringify(response, null, 2)
-    }
+      body: JSON.stringify(response, null, 2),
+    };
   } catch (error) {
-    lastResult.value = mapError("Public leaderboard request", error)
+    lastResult.value = mapError("Public leaderboard request", error);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function createResult() {
-  loading.value = true
+  loading.value = true;
 
   try {
     const response = await apiFetch<CreateResultResponse>("/results", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({})
-    })
+      body: JSON.stringify({}),
+    });
 
     lastResult.value = {
       label: "Protected result submission",
       status: 201,
-      body: JSON.stringify(response, null, 2)
-    }
+      body: JSON.stringify(response, null, 2),
+    };
   } catch (error) {
-    lastResult.value = mapError("Protected result submission", error)
+    lastResult.value = mapError("Protected result submission", error);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
@@ -133,15 +125,15 @@ function mapError(label: string, error: unknown): RequestResult {
     return {
       label,
       status: error.status,
-      body: error.body || error.message
-    }
+      body: error.body || error.message,
+    };
   }
 
   return {
     label,
     status: "error",
-    body: error instanceof Error ? error.message : "Unknown error"
-  }
+    body: error instanceof Error ? error.message : "Unknown error",
+  };
 }
 </script>
 
