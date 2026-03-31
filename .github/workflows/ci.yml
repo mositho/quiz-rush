@@ -2,12 +2,18 @@ name: CI
 
 on:
     push:
-        branches: ["**"]
     pull_request:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 
 jobs:
     frontend:
-        name: Frontend Lint + Format Check
+        name: Frontend Checks
         runs-on: ubuntu-latest
         defaults:
             run:
@@ -20,6 +26,8 @@ jobs:
               uses: actions/setup-node@v6
               with:
                   node-version: 24
+                  cache: pnpm
+                  cache-dependency-path: frontend/pnpm-lock.yaml
 
             - name: Setup pnpm
               uses: pnpm/action-setup@v4
@@ -35,12 +43,23 @@ jobs:
             - name: Run Prettier check
               run: pnpm format:check
 
-    questions_backend:
-        name: Questions Backend Unit Tests
+            - name: Build frontend
+              run: pnpm build
+
+    go_backends:
+        name: Go Backend Checks (${{ matrix.backend.name }})
         runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                backend:
+                    - name: Questions Backend
+                      dir: questions-backend
+                    - name: Game Backend
+                      dir: game-backend
         defaults:
             run:
-                working-directory: questions-backend
+                working-directory: ${{ matrix.backend.dir }}
         steps:
             - name: Checkout
               uses: actions/checkout@v6
@@ -48,36 +67,13 @@ jobs:
             - name: Setup Go
               uses: actions/setup-go@v6
               with:
-                  go-version-file: questions-backend/go.mod
+                  go-version-file: ${{ matrix.backend.dir }}/go.mod
+                  cache-dependency-path: ${{ matrix.backend.dir }}/go.sum
 
             - name: Run golangci-lint
               uses: golangci/golangci-lint-action@v9
               with:
-                  working-directory: questions-backend
-                  args: --timeout=5m
-
-            - name: Run tests
-              run: go test -v ./...
-
-    game_backend:
-        name: Game Backend Unit Tests
-        runs-on: ubuntu-latest
-        defaults:
-            run:
-                working-directory: game-backend
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v6
-
-            - name: Setup Go
-              uses: actions/setup-go@v6
-              with:
-                  go-version-file: game-backend/go.mod
-
-            - name: Run golangci-lint
-              uses: golangci/golangci-lint-action@v9
-              with:
-                  working-directory: game-backend
+                  working-directory: ${{ matrix.backend.dir }}
                   args: --timeout=5m
 
             - name: Run tests
