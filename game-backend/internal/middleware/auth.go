@@ -2,10 +2,9 @@ package middleware
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"quiz-rush/game-backend/internal/httpjson"
 
@@ -26,45 +25,48 @@ func NewOIDCAuthMiddleware(
 		return nil, nil
 	}
 
-	providerContext := ctx
-	if issuerURL != internalIssuerURL {
-		providerContext = oidc.InsecureIssuerURLContext(providerContext, issuerURL)
-	}
-
-	provider, err := newProviderWithRetry(providerContext, internalIssuerURL, 150, 2*time.Second)
-	if err != nil {
-		return nil, err
-	}
-
-	verifier := provider.Verifier(&oidc.Config{SkipClientIDCheck: true})
+	_ = ctx
+	jwksURL := strings.TrimSuffix(internalIssuerURL, "/") + "/protocol/openid-connect/certs"
+	keySet := oidc.NewRemoteKeySet(context.Background(), jwksURL)
+	verifier := oidc.NewVerifier(issuerURL, keySet, &oidc.Config{SkipClientIDCheck: true})
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authorization := r.Header.Get("Authorization")
 			if !strings.HasPrefix(authorization, "Bearer ") {
+				log.Printf("auth rejected: missing bearer token")
 				writeUnauthorized(w)
 				return
 			}
 
 			rawToken := strings.TrimSpace(strings.TrimPrefix(authorization, "Bearer "))
 			if rawToken == "" {
+				log.Printf("auth rejected: empty bearer token")
 				writeUnauthorized(w)
 				return
 			}
 
 			verifiedToken, err := verifier.Verify(r.Context(), rawToken)
 			if err != nil {
+				log.Printf("auth rejected: token verification failed: %v", err)
 				writeUnauthorized(w)
 				return
 			}
 
 			var claims accessTokenClaims
 			if err := verifiedToken.Claims(&claims); err != nil {
+				log.Printf("auth rejected: unable to decode token claims: %v", err)
 				writeUnauthorized(w)
 				return
 			}
 
-			if claims.AuthorizedParty != clientID {
+			if claims.AuthorizedParty != clientID && !containsAudience(verifiedToken.Audience, clientID) {
+				log.Printf(
+					"auth rejected: token client mismatch, azp=%q aud=%q expected=%q",
+					claims.AuthorizedParty,
+					verifiedToken.Audience,
+					clientID,
+				)
 				writeUnauthorized(w)
 				return
 			}
@@ -74,34 +76,14 @@ func NewOIDCAuthMiddleware(
 	}, nil
 }
 
-func newProviderWithRetry(
-	ctx context.Context,
-	internalIssuerURL string,
-	attempts int,
-	wait time.Duration,
-) (*oidc.Provider, error) {
-	var lastErr error
-
-	for i := 0; i < attempts; i++ {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-
-		provider, err := oidc.NewProvider(ctx, internalIssuerURL)
-		if err == nil {
-			return provider, nil
-		}
-
-		lastErr = err
-
-		select {
-		case <-time.After(wait):
-		case <-ctx.Done():
-			return nil, ctx.Err()
+func containsAudience(audience []string, clientID string) bool {
+	for _, entry := range audience {
+		if entry == clientID {
+			return true
 		}
 	}
 
-	return nil, fmt.Errorf("oidc provider unavailable after %d attempts: %w", attempts, lastErr)
+	return false
 }
 
 func writeUnauthorized(w http.ResponseWriter) {
