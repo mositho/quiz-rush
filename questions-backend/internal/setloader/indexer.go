@@ -136,6 +136,7 @@ func (i *Indexer) LoadQuestionsByID(id string) ([]Question, error) {
 }
 
 func readSetFile(path string) (*questionSetFile, error) {
+	// #nosec G304 -- path comes from the indexed question set files within the configured sets directory.
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read set file %s: %w", path, err)

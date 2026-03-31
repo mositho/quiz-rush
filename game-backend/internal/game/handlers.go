@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -149,14 +150,14 @@ func (h *Handler) StartSession(w http.ResponseWriter, r *http.Request) {
 
 	var request startSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		httpjson.Write(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
 
 	now := time.Now().UTC()
 	session, err := h.service.StartSession(r.Context(), request.DurationSeconds, request.SelectedQuestionSetIDs, now)
 	if err != nil {
-		httpjson.Write(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
@@ -166,9 +167,9 @@ func (h *Handler) StartSession(w http.ResponseWriter, r *http.Request) {
 		saveDeadlineAt *time.Time
 	)
 	if user, ok := middleware.AuthenticatedUserFromContext(r.Context()); ok {
-		profileID, err := h.repository.EnsureUserProfile(r.Context(), user)
-		if err != nil {
-			httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to ensure user profile"})
+		profileID, ensureErr := h.repository.EnsureUserProfile(r.Context(), user)
+		if ensureErr != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to ensure user profile"})
 			return
 		}
 		ownerProfileID = &profileID
@@ -176,11 +177,11 @@ func (h *Handler) StartSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repository.CreateSession(r.Context(), session, ownerProfileID, isAnonymous, saveDeadlineAt); err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to create session"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create session"})
 		return
 	}
 
-	httpjson.Write(w, http.StatusCreated, buildSessionResponse(session, now))
+	writeJSON(w, http.StatusCreated, buildSessionResponse(session, now))
 }
 
 func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
@@ -192,35 +193,36 @@ func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	session, ownerProfileID, isAnonymous, err := h.repository.LoadSession(r.Context(), chi.URLParam(r, "sessionId"))
 	if errors.Is(err, ErrSessionNotFound) {
-		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "session not found"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "session not found"})
 		return
 	}
 	if err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
 		return
 	}
 	authenticatedProfileID, err := h.authenticatedProfileID(r)
 	if err != nil {
-		httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
 		return
 	}
-	if err := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous); err != nil {
+	accessErr := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous)
+	if accessErr != nil {
 		statusCode := http.StatusForbidden
-		if errors.Is(err, errAuthenticationRequired) {
+		if errors.Is(accessErr, errAuthenticationRequired) {
 			statusCode = http.StatusUnauthorized
 		}
-		httpjson.Write(w, statusCode, map[string]string{"error": err.Error()})
+		writeJSON(w, statusCode, map[string]string{"error": accessErr.Error()})
 		return
 	}
 
 	session.Sync(now)
 	h.applyAnonymousSaveDeadline(session, now)
 	if err := h.repository.UpdateSession(r.Context(), session); err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
 		return
 	}
 
-	httpjson.Write(w, http.StatusOK, buildSessionResponse(session, now))
+	writeJSON(w, http.StatusOK, buildSessionResponse(session, now))
 }
 
 func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
@@ -231,54 +233,55 @@ func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 
 	var request answerRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		httpjson.Write(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
 
 	now := time.Now().UTC()
 	session, ownerProfileID, isAnonymous, err := h.repository.LoadSession(r.Context(), chi.URLParam(r, "sessionId"))
 	if errors.Is(err, ErrSessionNotFound) {
-		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "session not found"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "session not found"})
 		return
 	}
 	if err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
 		return
 	}
 	authenticatedProfileID, err := h.authenticatedProfileID(r)
 	if err != nil {
-		httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
 		return
 	}
-	if err := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous); err != nil {
+	accessErr := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous)
+	if accessErr != nil {
 		statusCode := http.StatusForbidden
-		if errors.Is(err, errAuthenticationRequired) {
+		if errors.Is(accessErr, errAuthenticationRequired) {
 			statusCode = http.StatusUnauthorized
 		}
-		httpjson.Write(w, statusCode, map[string]string{"error": err.Error()})
+		writeJSON(w, statusCode, map[string]string{"error": accessErr.Error()})
 		return
 	}
 
 	result, err := session.SubmitAnswer(now, request.SelectedAnswerIndex)
 	if err != nil {
-		httpjson.Write(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
 	h.applyAnonymousSaveDeadline(session, now)
 	if err := h.repository.UpdateSession(r.Context(), session); err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
 		return
 	}
 
 	if session.Status == SessionStatusFinished {
 		if err := h.persistScore(r, session, ownerProfileID, isAnonymous); err != nil {
-			httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to create score"})
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create score"})
 			return
 		}
 	}
 
-	httpjson.Write(w, http.StatusOK, answerResponse{
+	writeJSON(w, http.StatusOK, answerResponse{
 		Session: buildSessionResponse(session, now),
 		Result:  result,
 	})
@@ -300,44 +303,44 @@ func (h *Handler) LinkAccount(w http.ResponseWriter, r *http.Request) {
 
 	authenticatedProfileID, err := h.authenticatedProfileID(r)
 	if err != nil || authenticatedProfileID == nil {
-		httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": errAuthenticationRequired.Error()})
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": errAuthenticationRequired.Error()})
 		return
 	}
 
 	now := time.Now().UTC()
 	scoreID, err := h.repository.LinkAnonymousSessionScore(r.Context(), chi.URLParam(r, "sessionId"), *authenticatedProfileID, now)
 	if errors.Is(err, ErrSessionNotFound) {
-		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "session not found"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "session not found"})
 		return
 	}
 	if errors.Is(err, ErrSessionNotFinished) {
-		httpjson.Write(w, http.StatusConflict, map[string]string{"error": "session is not finished"})
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "session is not finished"})
 		return
 	}
 	if errors.Is(err, ErrSessionExpired) {
-		httpjson.Write(w, http.StatusConflict, map[string]string{"error": "session can no longer be linked"})
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "session can no longer be linked"})
 		return
 	}
 	if errors.Is(err, ErrSessionAlreadyLinked) {
-		httpjson.Write(w, http.StatusConflict, map[string]string{"error": "session is already linked"})
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "session is already linked"})
 		return
 	}
 	if errors.Is(err, ErrScoreNotFound) {
-		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "score not found"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "score not found"})
 		return
 	}
 	if err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to link account"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to link account"})
 		return
 	}
 
 	profile, err := h.repository.GetProfileByID(r.Context(), *authenticatedProfileID)
 	if err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load linked profile"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load linked profile"})
 		return
 	}
 
-	httpjson.Write(w, http.StatusOK, linkAccountResponse{
+	writeJSON(w, http.StatusOK, linkAccountResponse{
 		SessionID:    chi.URLParam(r, "sessionId"),
 		ScoreID:      scoreID,
 		PublicUserID: profile.PublicUserID,
@@ -354,15 +357,15 @@ func (h *Handler) GetScore(w http.ResponseWriter, r *http.Request) {
 
 	score, err := h.repository.GetScore(r.Context(), chi.URLParam(r, "scoreId"))
 	if errors.Is(err, ErrScoreNotFound) {
-		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "score not found"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "score not found"})
 		return
 	}
 	if err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load score"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load score"})
 		return
 	}
 
-	httpjson.Write(w, http.StatusOK, buildScoreResponse(score))
+	writeJSON(w, http.StatusOK, buildScoreResponse(score))
 }
 
 func (h *Handler) GetUserScores(w http.ResponseWriter, r *http.Request) {
@@ -373,11 +376,11 @@ func (h *Handler) GetUserScores(w http.ResponseWriter, r *http.Request) {
 
 	profile, scores, err := h.repository.ListScoresByPublicUserID(r.Context(), chi.URLParam(r, "publicUserId"))
 	if errors.Is(err, ErrProfileNotFound) {
-		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "user not found"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "user not found"})
 		return
 	}
 	if err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load user scores"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load user scores"})
 		return
 	}
 
@@ -386,7 +389,7 @@ func (h *Handler) GetUserScores(w http.ResponseWriter, r *http.Request) {
 		summaries = append(summaries, buildScoreSummaryResponse(score))
 	}
 
-	httpjson.Write(w, http.StatusOK, userScoresResponse{
+	writeJSON(w, http.StatusOK, userScoresResponse{
 		PublicUserID: profile.PublicUserID,
 		DisplayName:  profile.DisplayName,
 		Scores:       summaries,
@@ -401,23 +404,18 @@ func (h *Handler) GetUserStats(w http.ResponseWriter, r *http.Request) {
 
 	profile, stats, err := h.repository.GetUserStatsByPublicUserID(r.Context(), chi.URLParam(r, "publicUserId"))
 	if errors.Is(err, ErrProfileNotFound) {
-		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "user not found"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "user not found"})
 		return
 	}
 	if err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load user stats"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load user stats"})
 		return
 	}
 
-	httpjson.Write(w, http.StatusOK, userStatsResponse{
+	writeJSON(w, http.StatusOK, userStatsResponse{
 		PublicUserID: profile.PublicUserID,
 		DisplayName:  profile.DisplayName,
-		Stats: userStatsPayload{
-			GamesPlayed:           stats.GamesPlayed,
-			BestScore:             stats.BestScore,
-			AverageScore:          stats.AverageScore,
-			TotalCorrectQuestions: stats.TotalCorrectQuestions,
-		},
+		Stats:        userStatsPayload(stats),
 	})
 }
 
@@ -429,21 +427,21 @@ func (h *Handler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 
 	authenticatedProfileID, err := h.authenticatedProfileID(r)
 	if err != nil || authenticatedProfileID == nil {
-		httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": errAuthenticationRequired.Error()})
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": errAuthenticationRequired.Error()})
 		return
 	}
 
 	profile, err := h.repository.GetProfileByID(r.Context(), *authenticatedProfileID)
 	if errors.Is(err, ErrProfileNotFound) {
-		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "user not found"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "user not found"})
 		return
 	}
 	if err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load user"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load user"})
 		return
 	}
 
-	httpjson.Write(w, http.StatusOK, publicUserResponse{
+	writeJSON(w, http.StatusOK, publicUserResponse{
 		PublicUserID: profile.PublicUserID,
 		DisplayName:  profile.DisplayName,
 	})
@@ -464,7 +462,7 @@ func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 	if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
 		parsedLimit, err := strconv.Atoi(rawLimit)
 		if err != nil || parsedLimit <= 0 {
-			httpjson.Write(w, http.StatusBadRequest, map[string]string{"error": "invalid limit"})
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid limit"})
 			return
 		}
 		if parsedLimit > 100 {
@@ -475,7 +473,7 @@ func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 
 	entries, err := h.repository.ListLeaderboard(r.Context(), configurationKey, limit)
 	if err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load leaderboard"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load leaderboard"})
 		return
 	}
 
@@ -494,7 +492,7 @@ func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	httpjson.Write(w, http.StatusOK, leaderboardResponse{
+	writeJSON(w, http.StatusOK, leaderboardResponse{
 		ConfigurationKey: configurationKey,
 		Entries:          responseEntries,
 	})
@@ -509,16 +507,16 @@ func (h *Handler) finishWithReason(w http.ResponseWriter, r *http.Request, reaso
 	now := time.Now().UTC()
 	session, ownerProfileID, isAnonymous, err := h.repository.LoadSession(r.Context(), chi.URLParam(r, "sessionId"))
 	if errors.Is(err, ErrSessionNotFound) {
-		httpjson.Write(w, http.StatusNotFound, map[string]string{"error": "session not found"})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "session not found"})
 		return
 	}
 	if err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
 		return
 	}
 	authenticatedProfileID, err := h.authenticatedProfileID(r)
 	if err != nil {
-		httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
 		return
 	}
 	if err := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous); err != nil {
@@ -526,22 +524,22 @@ func (h *Handler) finishWithReason(w http.ResponseWriter, r *http.Request, reaso
 		if errors.Is(err, errAuthenticationRequired) {
 			statusCode = http.StatusUnauthorized
 		}
-		httpjson.Write(w, statusCode, map[string]string{"error": err.Error()})
+		writeJSON(w, statusCode, map[string]string{"error": err.Error()})
 		return
 	}
 
 	session.Finish(now, reason)
 	h.applyAnonymousSaveDeadline(session, now)
 	if err := h.repository.UpdateSession(r.Context(), session); err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
 		return
 	}
 	if err := h.persistScore(r, session, ownerProfileID, isAnonymous); err != nil {
-		httpjson.Write(w, http.StatusInternalServerError, map[string]string{"error": "failed to create score"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create score"})
 		return
 	}
 
-	httpjson.Write(w, http.StatusOK, buildSessionResponse(session, now))
+	writeJSON(w, http.StatusOK, buildSessionResponse(session, now))
 }
 
 func (h *Handler) persistScore(r *http.Request, session *Session, ownerProfileID *string, isAnonymous bool) error {
@@ -618,7 +616,10 @@ func buildSessionResponse(session *Session, now time.Time) sessionResponse {
 		cooldownUntil = &value
 	}
 
-	currentQuestion, _ := session.CurrentQuestion(now)
+	currentQuestion, currentQuestionErr := session.CurrentQuestion(now)
+	if currentQuestionErr != nil {
+		currentQuestion = nil
+	}
 
 	return sessionResponse{
 		SessionID:              session.ID,
@@ -685,5 +686,11 @@ func buildScoreSummaryResponse(score storedScore) scoreSummaryResponse {
 }
 
 func writeServiceUnavailable(w http.ResponseWriter) {
-	httpjson.Write(w, http.StatusServiceUnavailable, map[string]string{"error": "game backend is not fully configured"})
+	writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "game backend is not fully configured"})
+}
+
+func writeJSON(w http.ResponseWriter, statusCode int, payload any) {
+	if err := httpjson.Write(w, statusCode, payload); err != nil {
+		log.Printf("failed to write JSON response: %v", err)
+	}
 }

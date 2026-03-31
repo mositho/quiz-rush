@@ -12,12 +12,14 @@ import (
 	"quiz-rush/game-backend/internal/api"
 	"quiz-rush/game-backend/internal/db"
 
-	"github.com/joho/godotenv"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 )
 
 func TestCreateSessionWithDatabase(t *testing.T) {
-	_ = godotenv.Load("../.env", "game-backend/.env")
+	if loadErr := godotenv.Load("../.env", "game-backend/.env"); loadErr != nil {
+		t.Logf("skipping optional env file load: %v", loadErr)
+	}
 
 	databaseURL := os.Getenv("GAME_BACKEND_TEST_DATABASE_URL")
 	if databaseURL == "" {
@@ -31,13 +33,13 @@ func TestCreateSessionWithDatabase(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	if err := pool.Ping(ctx); err != nil {
-		t.Skipf("test database is not reachable: %v", err)
+	if pingErr := pool.Ping(ctx); pingErr != nil {
+		t.Skipf("test database is not reachable: %v", pingErr)
 	}
 	t.Log("connected to test database")
 
-	if err := db.RunMigrations(ctx, pool); err != nil {
-		t.Fatal(err)
+	if migrationErr := db.RunMigrations(ctx, pool); migrationErr != nil {
+		t.Fatal(migrationErr)
 	}
 	cleanupIntegrationTables(t, ctx, pool)
 	defer cleanupIntegrationTables(t, ctx, pool)
@@ -50,7 +52,7 @@ func TestCreateSessionWithDatabase(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode([]map[string]any{
+		if encodeErr := json.NewEncoder(w).Encode([]map[string]any{
 			{
 				"id":            "q1",
 				"difficulty":    2,
@@ -59,8 +61,8 @@ func TestCreateSessionWithDatabase(t *testing.T) {
 				"options":       []string{"A", "B", "C", "D"},
 				"correctAnswer": 1,
 			},
-		}); err != nil {
-			t.Fatal(err)
+		}); encodeErr != nil {
+			t.Fatal(encodeErr)
 		}
 	}))
 	defer questionsServer.Close()

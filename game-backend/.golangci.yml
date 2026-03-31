@@ -1,16 +1,17 @@
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-  govet:
-    shadow: true
+version: "2"
+
 linters:
+  default: none
   enable:
-    - govet
     - errcheck
+    - govet
     - staticcheck
-    - gosec
     - unused
-run:
-  timeout: 5m
-  issues-exit-code: 1
+    - gosec
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    govet:
+      enable:
+        - shadow

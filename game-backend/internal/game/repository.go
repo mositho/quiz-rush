@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"quiz-rush/game-backend/internal/middleware"
@@ -160,7 +161,9 @@ func (r *sessionRepository) CreateSession(
 		return fmt.Errorf("begin session transaction: %w", err)
 	}
 	defer func() {
-		_ = tx.Rollback(ctx)
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
+			log.Printf("failed to rollback create session transaction: %v", rollbackErr)
+		}
 	}()
 
 	sessionID, err := insertSessionRow(ctx, tx, session, ownerProfileID, isAnonymous, saveDeadlineAt)
@@ -203,7 +206,9 @@ func (r *sessionRepository) UpdateSession(ctx context.Context, session *Session)
 		return fmt.Errorf("begin update session transaction: %w", err)
 	}
 	defer func() {
-		_ = tx.Rollback(ctx)
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
+			log.Printf("failed to rollback update session transaction: %v", rollbackErr)
+		}
 	}()
 
 	if err := updateSessionRow(ctx, tx, session); err != nil {
@@ -307,7 +312,9 @@ func (r *sessionRepository) LinkAnonymousSessionScore(
 		return "", fmt.Errorf("begin link session score transaction: %w", err)
 	}
 	defer func() {
-		_ = tx.Rollback(ctx)
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
+			log.Printf("failed to rollback link session score transaction: %v", rollbackErr)
+		}
 	}()
 
 	var (
@@ -335,12 +342,12 @@ func (r *sessionRepository) LinkAnonymousSessionScore(
 
 	if currentOwnerProfileID != nil {
 		if *currentOwnerProfileID == ownerProfileID {
-			scoreID, err := r.scoreIDBySessionID(ctx, tx, sessionID)
-			if err != nil {
-				return "", err
+			scoreID, scoreErr := r.scoreIDBySessionID(ctx, tx, sessionID)
+			if scoreErr != nil {
+				return "", scoreErr
 			}
-			if err := tx.Commit(ctx); err != nil {
-				return "", fmt.Errorf("commit idempotent link session score transaction: %w", err)
+			if commitErr := tx.Commit(ctx); commitErr != nil {
+				return "", fmt.Errorf("commit idempotent link session score transaction: %w", commitErr)
 			}
 			return scoreID, nil
 		}

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"quiz-rush/game-backend/internal/api"
@@ -25,8 +26,8 @@ func main() {
 	}
 	defer pool.Close()
 
-	if err := db.RunMigrations(ctx, pool); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+	if migrationErr := db.RunMigrations(ctx, pool); migrationErr != nil {
+		log.Fatalf("Failed to run migrations: %v", migrationErr)
 	}
 
 	authMiddleware, err := middleware.NewOIDCAuthMiddleware(
@@ -43,6 +44,11 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+	portNumber, err := strconv.Atoi(port)
+	if err != nil {
+		log.Fatalf("Invalid PORT value: %v", err)
+	}
+	port = strconv.Itoa(portNumber)
 
 	router := api.NewRouter(pool, authMiddleware)
 	server := &http.Server{
@@ -54,7 +60,7 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	log.Printf("Backend running on :%s", port)
+	log.Printf("Backend running on :%d", portNumber)
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}

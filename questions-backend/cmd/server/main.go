@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"quiz-rush/questions-backend/internal/api"
@@ -19,6 +20,11 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+	portNumber, err := strconv.Atoi(port)
+	if err != nil {
+		log.Fatalf("Invalid PORT value: %v", err)
+	}
+	port = strconv.Itoa(portNumber)
 
 	setsDir := resolveSetsDir()
 	indexer := setloader.NewIndexer(setsDir)
@@ -28,7 +34,7 @@ func main() {
 
 	router := api.NewRouter(indexer)
 
-	log.Printf("Questions backend running on :%s", port)
+	log.Printf("Questions backend running on :%d", portNumber)
 	srv := &http.Server{
 		Addr:         ":" + port,
 		Handler:      router,

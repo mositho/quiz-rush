@@ -44,7 +44,7 @@ func (c *Client) BaseURL() string {
 	return c.baseURL
 }
 
-func (c *Client) LoadQuestionsBySetID(ctx context.Context, setID string) ([]Question, error) {
+func (c *Client) LoadQuestionsBySetID(ctx context.Context, setID string) (questions []Question, err error) {
 	request, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
@@ -59,13 +59,16 @@ func (c *Client) LoadQuestionsBySetID(ctx context.Context, setID string) ([]Ques
 	if err != nil {
 		return nil, fmt.Errorf("load questions for set %q: %w", setID, err)
 	}
-	defer response.Body.Close()
+	defer func() {
+		if closeErr := response.Body.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("close questions response for set %q: %w", setID, closeErr)
+		}
+	}()
 
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("load questions for set %q: unexpected status %d", setID, response.StatusCode)
 	}
 
-	var questions []Question
 	if err := json.NewDecoder(response.Body).Decode(&questions); err != nil {
 		return nil, fmt.Errorf("decode questions for set %q: %w", setID, err)
 	}

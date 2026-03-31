@@ -71,7 +71,7 @@ func TestWrongAnswerTriggersCooldownUntilSynced(t *testing.T) {
 		t.Fatal("expected cooldown timestamp")
 	}
 
-	if _, err := session.CurrentQuestion(now.Add(3 * time.Second)); err == nil {
+	if _, currentQuestionErr := session.CurrentQuestion(now.Add(3 * time.Second)); currentQuestionErr == nil {
 		t.Fatal("expected cooldown to block current question")
 	}
 
