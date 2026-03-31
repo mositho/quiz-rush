@@ -5,7 +5,7 @@ import (
 	"os"
 
 	game "quiz-rush/game-backend/internal/game"
-	"quiz-rush/game-backend/internal/questionsclient"
+	"quiz-rush/game-backend/internal/questionsapi"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -29,16 +29,17 @@ func NewRouter(db *pgxpool.Pool, authMiddleware func(http.Handler) http.Handler)
 		questionsBaseURL = "http://localhost:8081"
 	}
 
-	gameHandler := game.NewHandler(db, questionsclient.New(questionsBaseURL))
+	gameHandler := game.NewHandler(db, questionsapi.New(questionsBaseURL))
 
 	r.Get("/health", Health)
 	r.Route("/api", func(api chi.Router) {
-		if authMiddleware != nil {
-			api.With(authMiddleware).Post("/results", gameHandler.CreateResult)
-		} else {
-			api.Post("/results", gameHandler.CreateResult)
-		}
-		api.Get("/leaderboard/{slug}", gameHandler.GetLeaderboard)
+		api.Route("/game", func(gameRouter chi.Router) {
+			gameRouter.Post("/sessions", gameHandler.StartSession)
+			gameRouter.Get("/sessions/{sessionId}", gameHandler.GetSession)
+			gameRouter.Post("/sessions/{sessionId}/answers", gameHandler.SubmitAnswer)
+			gameRouter.Post("/sessions/{sessionId}/finish", gameHandler.FinishSession)
+			gameRouter.Post("/sessions/{sessionId}/quit", gameHandler.QuitSession)
+		})
 	})
 
 	return r
