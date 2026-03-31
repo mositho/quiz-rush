@@ -1,72 +1,84 @@
 name: CI
 
 on:
-  push:
-    branches: ["**"]
-  pull_request:
+    push:
+        branches: ["**"]
+    pull_request:
 
 jobs:
-  frontend:
-    name: Frontend Lint + Format Check
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+    frontend:
+        name: Frontend Lint + Format Check
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: frontend
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v6
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
+            - name: Setup Node
+              uses: actions/setup-node@v6
+              with:
+                  node-version: 24
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
 
-      - name: Run ESLint
-        run: pnpm lint
+            - name: Run ESLint
+              run: pnpm lint
 
-      - name: Run Prettier check
-        run: pnpm format:check
+            - name: Run Prettier check
+              run: pnpm format:check
 
-  questions_backend:
-    name: Questions Backend Unit Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: questions-backend
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+    questions_backend:
+        name: Questions Backend Unit Tests
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: questions-backend
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v6
 
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: questions-backend/go.mod
+            - name: Setup Go
+              uses: actions/setup-go@v6
+              with:
+                  go-version-file: questions-backend/go.mod
 
-      - name: Run tests
-        run: go test ./...
+            - name: Install golangci-lint
+              run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
-  game_backend:
-    name: Game Backend Unit Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: game-backend
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+            - name: Run golangci-lint
+              run: golangci-lint run --timeout=5m
 
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: game-backend/go.mod
+            - name: Run tests
+              run: go test ./...
 
-      - name: Run tests
-        run: go test ./...
+    game_backend:
+        name: Game Backend Unit Tests
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: game-backend
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v6
+
+            - name: Setup Go
+              uses: actions/setup-go@v6
+              with:
+                  go-version-file: game-backend/go.mod
+
+            - name: Install golangci-lint
+              run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+            - name: Run golangci-lint
+              run: golangci-lint run --timeout=5m
+
+            - name: Run tests
+              run: go test ./...
