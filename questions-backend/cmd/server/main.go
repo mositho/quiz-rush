@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"quiz-rush/questions-backend/internal/api"
 	"quiz-rush/questions-backend/internal/setloader"
@@ -28,14 +29,25 @@ func main() {
 	router := api.NewRouter(indexer)
 
 	log.Printf("Questions backend running on :%s", port)
-	if err := http.ListenAndServe(":"+port, router); err != nil {
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
 }
 
 func loadBackendEnv() {
-	_ = godotenv.Load(".env")
-	_ = godotenv.Load("questions-backend/.env")
+	if err := godotenv.Load(".env"); err != nil {
+		log.Printf("No .env file loaded: %v", err)
+	}
+	if err := godotenv.Load("questions-backend/.env"); err != nil {
+		log.Printf("No questions-backend/.env file loaded: %v", err)
+	}
 }
 
 func resolveSetsDir() string {

@@ -3,7 +3,7 @@ linters-settings:
     check-type-assertions: true
     check-blank: true
   govet:
-    check-shadowing: true
+    shadow: true
 linters:
   enable:
     - govet
