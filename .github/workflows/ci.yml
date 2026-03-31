@@ -7,8 +7,10 @@ on:
 
 jobs:
   frontend:
-    name: Frontend Lint + Format Check
+    name: Frontend Lint, Format Check + Integration Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: frontend
@@ -35,9 +37,14 @@ jobs:
       - name: Run Prettier check
         run: pnpm format:check
 
+      - name: Run integration tests
+        run: pnpm test
+
   questions_backend:
-    name: Questions Backend Unit Tests
+    name: Questions Backend Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: questions-backend
@@ -54,8 +61,10 @@ jobs:
         run: go test ./...
 
   game_backend:
-    name: Game Backend Unit Tests
+    name: Game Backend Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: game-backend
