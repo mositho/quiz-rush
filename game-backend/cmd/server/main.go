@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"quiz-rush/game-backend/internal/api"
 	"quiz-rush/game-backend/internal/db"
@@ -40,9 +41,17 @@ func main() {
 	}
 
 	router := api.NewRouter(pool, authMiddleware)
+	server := &http.Server{
+		Addr:              ":" + port,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 
 	log.Printf("Backend running on :%s", port)
-	if err := http.ListenAndServe(":"+port, router); err != nil {
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
 }

@@ -117,5 +117,7 @@ func containsAudience(audience []string, clientID string) bool {
 }
 
 func writeUnauthorized(w http.ResponseWriter) {
-	httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	if err := httpjson.Write(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"}); err != nil {
+		log.Printf("failed to write unauthorized response: %v", err)
+	}
 }

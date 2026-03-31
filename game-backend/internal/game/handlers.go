@@ -1,6 +1,7 @@
 package game
 
 import (
+	"log"
 	"net/http"
 
 	"quiz-rush/game-backend/internal/httpjson"
@@ -52,14 +53,18 @@ func (h *Handler) CreateResult(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	httpjson.Write(w, http.StatusCreated, response)
+	if err := httpjson.Write(w, http.StatusCreated, response); err != nil {
+		log.Printf("failed to write create result response: %v", err)
+	}
 }
 
 func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 
-	httpjson.Write(w, http.StatusOK, LeaderboardResponse{
+	if err := httpjson.Write(w, http.StatusOK, LeaderboardResponse{
 		PackageSlug: slug,
 		Entries:     []LeaderboardEntry{},
-	})
+	}); err != nil {
+		log.Printf("failed to write leaderboard response: %v", err)
+	}
 }
