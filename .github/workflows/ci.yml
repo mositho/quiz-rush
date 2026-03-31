@@ -57,7 +57,7 @@ jobs:
                   args: --timeout=5m
 
             - name: Run tests
-              run: go test ./...
+              run: go test -v ./...
 
     game_backend:
         name: Game Backend Unit Tests
@@ -81,4 +81,4 @@ jobs:
                   args: --timeout=5m
 
             - name: Run tests
-              run: go test ./...
+              run: go test -v ./...
