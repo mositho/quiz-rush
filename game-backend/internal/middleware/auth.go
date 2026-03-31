@@ -11,8 +11,21 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 )
 
+type authenticatedUserContextKey struct{}
+
+type AuthenticatedUser struct {
+	Subject           string
+	PreferredUsername string
+	Email             string
+	AuthorizedParty   string
+	Audience          []string
+}
+
 type accessTokenClaims struct {
-	AuthorizedParty string `json:"azp"`
+	Subject           string `json:"sub"`
+	PreferredUsername string `json:"preferred_username"`
+	Email             string `json:"email"`
+	AuthorizedParty   string `json:"azp"`
 }
 
 func NewOIDCAuthMiddleware(
@@ -71,9 +84,26 @@ func NewOIDCAuthMiddleware(
 				return
 			}
 
-			next.ServeHTTP(w, r)
+			user := AuthenticatedUser{
+				Subject:           claims.Subject,
+				PreferredUsername: claims.PreferredUsername,
+				Email:             claims.Email,
+				AuthorizedParty:   claims.AuthorizedParty,
+				Audience:          append([]string(nil), verifiedToken.Audience...),
+			}
+
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), authenticatedUserContextKey{}, user)))
 		})
 	}, nil
+}
+
+func AuthenticatedUserFromContext(ctx context.Context) (AuthenticatedUser, bool) {
+	user, ok := ctx.Value(authenticatedUserContextKey{}).(AuthenticatedUser)
+	return user, ok
+}
+
+func WithAuthenticatedUser(ctx context.Context, user AuthenticatedUser) context.Context {
+	return context.WithValue(ctx, authenticatedUserContextKey{}, user)
 }
 
 func containsAudience(audience []string, clientID string) bool {

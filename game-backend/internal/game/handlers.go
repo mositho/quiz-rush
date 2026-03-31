@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"quiz-rush/game-backend/internal/httpjson"
+	"quiz-rush/game-backend/internal/middleware"
 	"quiz-rush/game-backend/internal/questionsclient"
 
 	"github.com/go-chi/chi/v5"
@@ -16,7 +17,14 @@ type Handler struct {
 }
 
 type CreateResultResponse struct {
-	Status string `json:"status"`
+	Status string                    `json:"status"`
+	User   *CreateResultUserResponse `json:"user,omitempty"`
+}
+
+type CreateResultUserResponse struct {
+	Subject  string `json:"subject"`
+	Username string `json:"username,omitempty"`
+	Email    string `json:"email,omitempty"`
 }
 
 type LeaderboardEntry struct {
@@ -34,7 +42,17 @@ func NewHandler(db *pgxpool.Pool, questionsClient *questionsclient.Client) *Hand
 }
 
 func (h *Handler) CreateResult(w http.ResponseWriter, r *http.Request) {
-	httpjson.Write(w, http.StatusCreated, CreateResultResponse{Status: "created"})
+	response := CreateResultResponse{Status: "created"}
+
+	if user, ok := middleware.AuthenticatedUserFromContext(r.Context()); ok {
+		response.User = &CreateResultUserResponse{
+			Subject:  user.Subject,
+			Username: user.PreferredUsername,
+			Email:    user.Email,
+		}
+	}
+
+	httpjson.Write(w, http.StatusCreated, response)
 }
 
 func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
