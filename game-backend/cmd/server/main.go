@@ -25,6 +25,10 @@ func main() {
 	}
 	defer pool.Close()
 
+	if err := db.RunMigrations(ctx, pool); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
 	authMiddleware, err := middleware.NewOIDCAuthMiddleware(
 		ctx,
 		os.Getenv("KEYCLOAK_ISSUER_URL"),
