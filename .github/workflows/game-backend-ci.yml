@@ -3,12 +3,12 @@ name: Game Backend CI
 on:
   push:
     paths:
-      - 'game-backend/**'
-      - '.github/workflows/game-backend-ci.yml'
+      - "game-backend/**"
+      - ".github/workflows/game-backend-ci.yml"
   pull_request:
     paths:
-      - 'game-backend/**'
-      - '.github/workflows/game-backend-ci.yml'
+      - "game-backend/**"
+      - ".github/workflows/game-backend-ci.yml"
 
 permissions:
   contents: read
