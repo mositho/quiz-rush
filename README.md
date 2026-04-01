@@ -1,8 +1,8 @@
 # Quiz Rush
 
-[![Frontend CI](https://github.com/mositho/quiz-rush/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/mositho/quiz-rush/actions/workflows/frontend-ci.yml)
-[![Game Backend CI](https://github.com/mositho/quiz-rush/actions/workflows/game-backend-ci.yml/badge.svg?branch=main)](https://github.com/mositho/quiz-rush/actions/workflows/game-backend-ci.yml)
-[![Questions Backend CI](https://github.com/mositho/quiz-rush/actions/workflows/questions-backend-ci.yml/badge.svg?branch=main)](https://github.com/mositho/quiz-rush/actions/workflows/questions-backend-ci.yml)
+[![Frontend](https://github.com/mositho/quiz-rush/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/mositho/quiz-rush/actions/workflows/frontend-ci.yml)
+[![Game Backend](https://github.com/mositho/quiz-rush/actions/workflows/game-backend-ci.yml/badge.svg?branch=main)](https://github.com/mositho/quiz-rush/actions/workflows/game-backend-ci.yml)
+[![Questions Backend](https://github.com/mositho/quiz-rush/actions/workflows/questions-backend-ci.yml/badge.svg?branch=main)](https://github.com/mositho/quiz-rush/actions/workflows/questions-backend-ci.yml)
 
 [Miro](https://miro.com/app/board/uXjVGt7dlRA=/?focusWidget=3458764665738994468)
 
