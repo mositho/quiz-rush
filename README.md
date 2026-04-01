@@ -6,6 +6,215 @@
 
 [Miro](https://miro.com/app/board/uXjVGt7dlRA=/?focusWidget=3458764665738994468)
 
+## Architecture
+
+Application structure from the current codebase:
+
+```mermaid
+classDiagram
+  class VueApp {
+    +bootstrap()
+  }
+  class Router {
+    +showHomeView()
+    +showLoginView()
+  }
+  class HomeView {
+    +loadLeaderboard()
+    +createResult()
+  }
+  class LoginRegisterView {
+    +login()
+    +register()
+  }
+  class ApiClient {
+    +apiFetch(path, init)
+    +buildApiUrl(path)
+  }
+  class KeycloakService {
+    +initKeycloak()
+    +loginWithKeycloak()
+    +logoutFromKeycloak()
+    +refreshKeycloakToken()
+    +getAccessToken()
+  }
+  class FrontendNginx {
+    +serveIndexHtml()
+    +proxyApi()
+    +proxyHealth()
+    +proxyAccount()
+  }
+  class GameRouter {
+    +health()
+    +createSession()
+    +getSessionById()
+    +submitAnswer()
+    +finishSession()
+    +quitSession()
+    +linkAccount()
+    +getScoreById()
+    +getLeaderboards()
+    +getCurrentUser()
+    +getUserScores()
+    +getUserStats()
+  }
+  class OIDCAuthMiddleware {
+    +authenticateRequest()
+    +AuthenticatedUserFromContext()
+  }
+  class GameHandler {
+    +StartSession()
+    +GetSession()
+    +SubmitAnswer()
+    +FinishSession()
+    +QuitSession()
+    +LinkAccount()
+    +GetScore()
+    +GetLeaderboard()
+    +GetCurrentUser()
+    +GetUserScores()
+    +GetUserStats()
+  }
+  class GameService {
+    +StartSession(ctx, duration, setIDs, now)
+    +BuildConfigurationKey(duration, setIDs)
+    +loadQuestions(ctx, setIDs)
+  }
+  class Session {
+    +Status
+    +FinishReason
+    +StartedAt
+    +EndsAt
+    +CooldownUntil
+    +CurrentScore
+    +CurrentQuestionIndex
+    +SessionQuestions
+    +Sync(now)
+    +CurrentQuestion(now)
+    +SubmitAnswer(now, selectedAnswerIndex)
+    +Finish(now, reason)
+    +ScoreResult()
+  }
+  class SessionRepository {
+    +EnsureUserProfile()
+    +CreateSession()
+    +LoadSession()
+    +UpdateSession()
+    +CreateScore()
+    +LinkAnonymousSessionScore()
+    +GetScore()
+    +GetLeaderboard()
+    +GetUserScores()
+    +GetUserStats()
+  }
+  class QuestionsAPIClient {
+    +LoadQuestionsBySetID(ctx, setID)
+  }
+  class QuestionsRouter {
+    +health()
+    +listSets()
+    +getSetById()
+  }
+  class QuestionsHandler {
+    +GetSets()
+    +GetSetQuestions()
+  }
+  class SetIndexer {
+    +LoadAllMetadata()
+    +ListSets()
+    +LoadQuestionsByID(id)
+  }
+  class Keycloak
+  class Postgres
+  class QuestionSetFiles {
+    +loadJsonFiles()
+  }
+
+  VueApp --> Router : mounts
+  Router --> HomeView : route /
+  Router --> LoginRegisterView : route /login
+  HomeView --> ApiClient : uses
+  HomeView --> KeycloakService : sign in/out state
+  LoginRegisterView --> FrontendNginx : calls /api/login,/api/register
+  ApiClient --> KeycloakService : bearer token refresh
+  VueApp --> FrontendNginx : served by
+  ApiClient --> FrontendNginx : /api requests
+  KeycloakService --> Keycloak : OIDC browser flow
+  FrontendNginx --> GameRouter : proxy /api,/health
+  FrontendNginx --> Keycloak : proxy /account
+  GameRouter --> OIDCAuthMiddleware : optional auth
+  GameRouter --> GameHandler : route handlers
+  GameHandler --> GameService : start/load gameplay
+  GameHandler --> SessionRepository : persistence
+  GameService --> QuestionsAPIClient : load set questions
+  QuestionsAPIClient --> QuestionsRouter : GET /api/sets/{id}
+  QuestionsRouter --> QuestionsHandler : route handlers
+  QuestionsHandler --> SetIndexer : list/load sets
+  SetIndexer --> QuestionSetFiles : read JSON files
+  SessionRepository --> Postgres : store sessions,scores,profiles
+  GameHandler --> Session : mutate and serialize
+  GameService --> Session : creates
+```
+
+Session start and answer flow:
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant V as Vue HomeView
+  participant K as KeycloakService
+  participant N as Frontend Nginx
+  participant R as GameRouter
+  participant M as OIDCAuthMiddleware
+  participant H as GameHandler
+  participant Svc as GameService
+  participant Sess as Session
+  participant Q as QuestionsAPIClient
+  participant QB as Questions Backend
+  participant Repo as SessionRepository
+  participant DB as Postgres
+
+  U->>V: Start session
+  V->>K: refreshKeycloakToken()
+  K-->>V: access token or anonymous state
+  V->>N: POST /api/game/sessions
+  N->>R: proxy request
+  R->>M: inspect Authorization header
+  M-->>R: authenticated user or anonymous request
+  R->>H: StartSession()
+  H->>Svc: StartSession(ctx, duration, setIDs, now)
+  Svc->>Q: LoadQuestionsBySetID(setID)
+  Q->>QB: GET /api/sets/{id}
+  QB-->>Q: question list
+  Q-->>Svc: questions
+  Svc-->>H: Session
+  H->>Repo: EnsureUserProfile() when signed in
+  H->>Repo: CreateSession(session,...)
+  Repo->>DB: insert game_sessions + game_session_questions
+  DB-->>Repo: committed
+  H-->>V: 201 session snapshot + currentQuestion
+
+  U->>V: Submit answer
+  V->>K: refreshKeycloakToken()
+  V->>N: POST /api/game/sessions/{id}/answers
+  N->>R: proxy request
+  R->>M: validate bearer token when present
+  R->>H: SubmitAnswer()
+  H->>Repo: LoadSession(sessionId)
+  Repo->>DB: read session + question rows
+  DB-->>Repo: persisted state
+  Repo-->>H: Session
+  H->>Sess: SubmitAnswer(now, selectedAnswerIndex)
+  Sess-->>H: AnswerResult
+  H->>Repo: UpdateSession(session)
+  Repo->>DB: update session + question rows
+  alt session finished
+    H->>Repo: CreateScore(session.ScoreResult())
+    Repo->>DB: insert game_scores
+  end
+  H-->>V: 200 session + answer result
+```
+
 ## Environment setup
 
 The project uses three tracked env files plus one optional local override file:
