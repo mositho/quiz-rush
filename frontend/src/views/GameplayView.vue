@@ -76,6 +76,7 @@ function nextQuestion() {
   correct.value = false;
   currentIndex.value++;
 }
+
 const finished = computed(() => currentIndex.value >= questions.value.length);
 function restart() {
   currentIndex.value = 0;
