@@ -51,5 +51,14 @@ jobs:
           working-directory: game-backend
           args: --timeout=5m
 
-      - name: Run tests
-        run: go test -v ./...
+      - name: Run unit tests
+        run: go test -v $(go list ./... | grep -v '/tests$')
+
+      - name: Run integration tests
+        shell: bash
+        run: |
+          if [ -d ./tests ]; then
+            go test -v ./tests
+          else
+            echo "No integration tests package found; skipping."
+          fi

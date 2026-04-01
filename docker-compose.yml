@@ -1,50 +1,33 @@
+x-postgres-common: &postgres-common
+    image: postgres:18-alpine
+    healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+        interval: 5s
+        timeout: 5s
+        retries: 10
+
 services:
     game-postgres:
-        image: postgres:18
+        <<: *postgres-common
         container_name: quiz-rush-game-postgres
         environment:
             POSTGRES_DB: quiz_rush_game
             POSTGRES_USER: quiz_rush_game
             POSTGRES_PASSWORD: ${GAME_POSTGRES_PASSWORD:-quiz_rush_game}
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-            interval: 5s
-            timeout: 5s
-            retries: 10
-        volumes:
-            - game_postgres_data:/var/lib/postgresql
-
-    game-postgres-test:
-        image: postgres:18
-        container_name: quiz-rush-game-postgres-test
-        environment:
-            POSTGRES_DB: quiz_rush_game_test
-            POSTGRES_USER: quiz_rush_game_test
-            POSTGRES_PASSWORD: ${GAME_TEST_POSTGRES_PASSWORD:-quiz_rush_game_test}
         ports:
-            - "${GAME_TEST_POSTGRES_HOST_PORT:-5434}:5432"
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-            interval: 5s
-            timeout: 5s
-            retries: 10
+            - "${GAME_POSTGRES_HOST_PORT:-5433}:5432"
         volumes:
-            - game_test_postgres_data:/var/lib/postgresql
+            - game_postgres_data:/var/lib/postgresql/data
 
     keycloak-postgres:
-        image: postgres:18
+        <<: *postgres-common
         container_name: quiz-rush-keycloak-postgres
         environment:
             POSTGRES_DB: keycloak
             POSTGRES_USER: keycloak
             POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-changeme}
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-            interval: 5s
-            timeout: 5s
-            retries: 10
         volumes:
-            - keycloak_postgres_data:/var/lib/postgresql
+            - keycloak_postgres_data:/var/lib/postgresql/data
 
     questions-backend:
         image: golang:1.25
@@ -127,5 +110,4 @@ services:
 
 volumes:
     game_postgres_data:
-    game_test_postgres_data:
     keycloak_postgres_data:
