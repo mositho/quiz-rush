@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -141,6 +142,7 @@ func cleanupIntegrationTables(t *testing.T, ctx context.Context, pool *pgxpool.P
 func startTestDatabase(ctx context.Context) (string, func(context.Context) error, error) {
 	dbName := "quiz_rush_game_test"
 	username := "quiz_rush_game_test"
+	// #nosec G101 -- test-only credentials for an ephemeral local container.
 	password := "quiz_rush_game_test"
 
 	container, err := postgres.Run(
@@ -162,7 +164,9 @@ func startTestDatabase(ctx context.Context) (string, func(context.Context) error
 
 	connectionString, err := container.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
-		_ = container.Terminate(ctx)
+		if terminateErr := container.Terminate(ctx); terminateErr != nil {
+			err = errors.Join(err, terminateErr)
+		}
 		return "", nil, err
 	}
 
