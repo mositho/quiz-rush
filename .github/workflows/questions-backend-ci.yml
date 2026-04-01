@@ -1,0 +1,55 @@
+name: Questions Backend CI
+
+on:
+  push:
+    paths:
+      - 'questions-backend/**'
+      - '.github/workflows/questions-backend-ci.yml'
+  pull_request:
+    paths:
+      - 'questions-backend/**'
+      - '.github/workflows/questions-backend-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: questions-backend-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  questions_backend:
+    name: Go Backend Checks (Questions Backend)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: questions-backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: questions-backend/go.mod
+          cache-dependency-path: questions-backend/go.sum
+
+      - name: Verify gofmt
+        shell: bash
+        run: |
+          set -euo pipefail
+          unformatted=$(find . -name '*.go' -not -path './vendor/*' -print0 | xargs -0 -r gofmt -l)
+          if [[ -n "$unformatted" ]]; then
+            echo "The following files are not gofmt-formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          working-directory: questions-backend
+          args: --timeout=5m
+
+      - name: Run tests
+        run: go test -v ./...

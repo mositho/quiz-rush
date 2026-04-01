@@ -1,0 +1,55 @@
+name: Game Backend CI
+
+on:
+  push:
+    paths:
+      - 'game-backend/**'
+      - '.github/workflows/game-backend-ci.yml'
+  pull_request:
+    paths:
+      - 'game-backend/**'
+      - '.github/workflows/game-backend-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game-backend-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  game_backend:
+    name: Go Backend Checks (Game Backend)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: game-backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: game-backend/go.mod
+          cache-dependency-path: game-backend/go.sum
+
+      - name: Verify gofmt
+        shell: bash
+        run: |
+          set -euo pipefail
+          unformatted=$(find . -name '*.go' -not -path './vendor/*' -print0 | xargs -0 -r gofmt -l)
+          if [[ -n "$unformatted" ]]; then
+            echo "The following files are not gofmt-formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          working-directory: game-backend
+          args: --timeout=5m
+
+      - name: Run tests
+        run: go test -v ./...
