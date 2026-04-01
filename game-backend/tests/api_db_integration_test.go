@@ -6,14 +6,17 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
+	"time"
 
 	"quiz-rush/game-backend/internal/api"
 	"quiz-rush/game-backend/internal/db"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestCreateSessionWithDatabase(t *testing.T) {
@@ -21,13 +24,18 @@ func TestCreateSessionWithDatabase(t *testing.T) {
 		t.Logf("skipping optional env file load: %v", loadErr)
 	}
 
-	databaseURL := os.Getenv("GAME_BACKEND_TEST_DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("set GAME_BACKEND_TEST_DATABASE_URL to run DB-backed integration tests")
-	}
-	t.Log("using GAME_BACKEND_TEST_DATABASE_URL")
-
 	ctx := context.Background()
+	databaseURL, terminate, err := startTestDatabase(ctx)
+	if err != nil {
+		t.Skipf("unable to start test database container: %v", err)
+	}
+	defer func() {
+		if terminateErr := terminate(ctx); terminateErr != nil {
+			t.Logf("failed to terminate test database container: %v", terminateErr)
+		}
+	}()
+	t.Log("started test database container")
+
 	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
 		t.Fatal(err)
@@ -128,4 +136,39 @@ func cleanupIntegrationTables(t *testing.T, ctx context.Context, pool *pgxpool.P
 			t.Fatal(err)
 		}
 	}
+}
+
+func startTestDatabase(ctx context.Context) (string, func(context.Context) error, error) {
+	dbName := "quiz_rush_game_test"
+	username := "quiz_rush_game_test"
+	password := "quiz_rush_game_test"
+
+	container, err := postgres.Run(
+		ctx,
+		"postgres:18-alpine",
+		postgres.WithDatabase(dbName),
+		postgres.WithUsername(username),
+		postgres.WithPassword(password),
+		testcontainers.WithWaitStrategy(
+			wait.ForAll(
+				wait.ForListeningPort("5432/tcp"),
+				wait.ForLog("database system is ready to accept connections"),
+			).WithDeadline(60*time.Second),
+		),
+	)
+	if err != nil {
+		return "", nil, err
+	}
+
+	connectionString, err := container.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		_ = container.Terminate(ctx)
+		return "", nil, err
+	}
+
+	terminate := func(terminateCtx context.Context) error {
+		return container.Terminate(terminateCtx)
+	}
+
+	return connectionString, terminate, nil
 }
