@@ -71,6 +71,7 @@ type userStats struct {
 
 type dbTX interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
@@ -84,10 +85,13 @@ func (r *sessionRepository) EnsureUserProfile(ctx context.Context, user middlewa
 		displayName = user.Subject
 	}
 
-	publicUserID := newPublicUserID()
+	publicUserID, err := newPublicUserID()
+	if err != nil {
+		return "", fmt.Errorf("generate public user id: %w", err)
+	}
 
 	var id string
-	err := r.db.QueryRow(
+	err = r.db.QueryRow(
 		ctx,
 		`
 		insert into user_profiles (public_user_id, keycloak_subject, display_name)
@@ -188,7 +192,7 @@ func (r *sessionRepository) CreateSession(
 }
 
 func (r *sessionRepository) LoadSession(ctx context.Context, sessionID string) (*Session, *string, bool, error) {
-	session, ownerProfileID, isAnonymous, err := loadSessionRow(ctx, r.db, sessionID)
+	session, ownerProfileID, isAnonymous, err := loadSessionRow(ctx, r.db, sessionID, false)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -199,6 +203,49 @@ func (r *sessionRepository) LoadSession(ctx context.Context, sessionID string) (
 	}
 
 	session.SessionQuestions = sessionQuestions
+
+	return session, ownerProfileID, isAnonymous, nil
+}
+
+func (r *sessionRepository) UpdateLockedSession(
+	ctx context.Context,
+	sessionID string,
+	mutate func(session *Session, ownerProfileID *string, isAnonymous bool) error,
+) (*Session, *string, bool, error) {
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, nil, false, fmt.Errorf("begin locked session transaction: %w", err)
+	}
+	defer func() {
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
+			log.Printf("failed to rollback locked session transaction: %v", rollbackErr)
+		}
+	}()
+
+	session, ownerProfileID, isAnonymous, err := loadSessionRow(ctx, tx, sessionID, true)
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	sessionQuestions, err := loadSessionQuestions(ctx, tx, sessionID)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	session.SessionQuestions = sessionQuestions
+
+	if err := mutate(session, ownerProfileID, isAnonymous); err != nil {
+		return nil, nil, false, err
+	}
+
+	if err := updateSessionRow(ctx, tx, session); err != nil {
+		return nil, nil, false, err
+	}
+	if err := updateSessionQuestions(ctx, tx, session.ID, session.SessionQuestions); err != nil {
+		return nil, nil, false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, nil, false, fmt.Errorf("commit locked session transaction: %w", err)
+	}
 
 	return session, ownerProfileID, isAnonymous, nil
 }
@@ -749,21 +796,34 @@ func insertSessionQuestionRow(ctx context.Context, tx dbTX, sessionID string, se
 	return nil
 }
 
-func loadSessionRow(ctx context.Context, db *pgxpool.Pool, sessionID string) (*Session, *string, bool, error) {
-	var (
-		session         Session
-		ownerProfileID  *string
-		isAnonymous     bool
-		finishReasonStr *string
-	)
+func loadSessionRow(ctx context.Context, db dbTX, sessionID string, lock bool) (*Session, *string, bool, error) {
+	type sessionRow struct {
+		ID                     string     `db:"id"`
+		OwnerProfileID         *string    `db:"owner_profile_id"`
+		IsAnonymous            bool       `db:"is_anonymous"`
+		Status                 string     `db:"status"`
+		FinishReason           *string    `db:"finish_reason"`
+		StartedAt              time.Time  `db:"started_at"`
+		EndsAt                 time.Time  `db:"ends_at"`
+		CooldownUntil          *time.Time `db:"cooldown_until"`
+		FinishedAt             *time.Time `db:"finished_at"`
+		SaveDeadlineAt         *time.Time `db:"save_deadline_at"`
+		DurationSeconds        int        `db:"duration_seconds"`
+		SelectedQuestionSetIDs []string   `db:"selected_question_set_ids"`
+		ConfigurationKey       string     `db:"configuration_key"`
+		CurrentQuestionIndex   *int       `db:"current_question_index"`
+		TotalQuestions         int        `db:"total_questions"`
+		AnsweredQuestions      int        `db:"answered_questions"`
+		CorrectQuestions       int        `db:"correct_questions"`
+		WrongQuestions         int        `db:"wrong_questions"`
+		CurrentScore           int        `db:"current_score"`
+	}
 
-	err := pgxscan.Get(
-		ctx,
-		db,
-		&session,
-		`
+	query := `
 		select
 			id,
+			owner_profile_id,
+			is_anonymous,
 			status,
 			finish_reason,
 			started_at,
@@ -782,9 +842,13 @@ func loadSessionRow(ctx context.Context, db *pgxpool.Pool, sessionID string) (*S
 			current_score
 		from game_sessions
 		where id = $1
-		`,
-		sessionID,
-	)
+	`
+	if lock {
+		query += " for update"
+	}
+
+	var row sessionRow
+	err := pgxscan.Get(ctx, db, &row, query, sessionID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil, false, ErrSessionNotFound
 	}
@@ -792,25 +856,33 @@ func loadSessionRow(ctx context.Context, db *pgxpool.Pool, sessionID string) (*S
 		return nil, nil, false, fmt.Errorf("load session: %w", err)
 	}
 
-	// Get owner_profile_id and is_anonymous separately to avoid scanning issues
-	err = db.QueryRow(
-		ctx,
-		`select owner_profile_id, is_anonymous, finish_reason from game_sessions where id = $1`,
-		sessionID,
-	).Scan(&ownerProfileID, &isAnonymous, &finishReasonStr)
-	if err != nil {
-		return nil, nil, false, fmt.Errorf("load session metadata: %w", err)
+	session := &Session{
+		ID:                     row.ID,
+		Status:                 SessionStatus(row.Status),
+		StartedAt:              row.StartedAt,
+		EndsAt:                 row.EndsAt,
+		CooldownUntil:          row.CooldownUntil,
+		FinishedAt:             row.FinishedAt,
+		SaveDeadlineAt:         row.SaveDeadlineAt,
+		DurationSeconds:        row.DurationSeconds,
+		SelectedQuestionSetIDs: row.SelectedQuestionSetIDs,
+		ConfigurationKey:       row.ConfigurationKey,
+		CurrentQuestionIndex:   row.CurrentQuestionIndex,
+		TotalQuestions:         row.TotalQuestions,
+		AnsweredQuestions:      row.AnsweredQuestions,
+		CorrectQuestions:       row.CorrectQuestions,
+		WrongQuestions:         row.WrongQuestions,
+		CurrentScore:           row.CurrentScore,
 	}
-
-	if finishReasonStr != nil {
-		reason := FinishReason(*finishReasonStr)
+	if row.FinishReason != nil {
+		reason := FinishReason(*row.FinishReason)
 		session.FinishReason = &reason
 	}
 
-	return &session, ownerProfileID, isAnonymous, nil
+	return session, row.OwnerProfileID, row.IsAnonymous, nil
 }
 
-func loadSessionQuestions(ctx context.Context, db *pgxpool.Pool, sessionID string) ([]SessionQuestion, error) {
+func loadSessionQuestions(ctx context.Context, db dbTX, sessionID string) ([]SessionQuestion, error) {
 	type tempSessionQuestion struct {
 		Position            int        `db:"position"`
 		QuestionID          string     `db:"question_id"`
@@ -1001,11 +1073,11 @@ func durationMilliseconds(duration *time.Duration) *int {
 	return &value
 }
 
-func newPublicUserID() string {
+func newPublicUserID() (string, error) {
 	randomBytes := make([]byte, 8)
 	if _, err := rand.Read(randomBytes); err != nil {
-		return "user_fallback"
+		return "", fmt.Errorf("read random bytes: %w", err)
 	}
 
-	return "user_" + hex.EncodeToString(randomBytes)
+	return "user_" + hex.EncodeToString(randomBytes), nil
 }
