@@ -258,6 +258,7 @@ docker compose up --build
 Important details:
 
 - The backends connect to Postgres with Docker service hostnames
+- Game backend integration tests use Testcontainers with `postgres:18-alpine` and require Docker locally and in CI
 - The frontend is built as static assets and served by Nginx
 - Nginx is the single public entry point on `http://localhost`
 - All requests starting with `/api` are proxied by Nginx to the game backend inside Docker
@@ -296,12 +297,15 @@ Override them in the root `.env` before sharing the environment or using it outs
 
 ### Running services outside Docker
 
-If you run either backend directly on your machine instead of inside Docker, update its `.env` file so the database host is reachable from your host OS. For example:
+If you run services directly on your machine instead of inside Docker:
+
+- `game-backend` needs Postgres. Use this in `game-backend/.env`:
 
 ```env
-DATABASE_URL=postgres://quiz_rush_questions:quiz_rush_questions_dev_password@localhost:5432/quiz_rush_questions?sslmode=disable
-DATABASE_URL=postgres://quiz_rush_game:quiz_rush_game_dev_password@localhost:5433/quiz_rush_game?sslmode=disable
+DATABASE_URL=postgres://quiz_rush_game:quiz_rush_game@localhost:5433/quiz_rush_game?sslmode=disable
 ```
+
+- `questions-backend` is file-backed (`questionsets/*.json`) and does not require a Postgres `DATABASE_URL`.
 
 For local game backend to questions backend calls outside Docker, keep this in `game-backend/.env`:
 
