@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+mapfile -t staged_files < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [[ ${#staged_files[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+frontend_files=()
+frontend_rel_files=()
+game_go_files=()
+questions_go_files=()
+
+for file in "${staged_files[@]}"; do
+  case "$file" in
+    frontend/*)
+      case "$file" in
+        *.js|*.cjs|*.mjs|*.ts|*.tsx|*.vue|*.css|*.scss|*.html|*.json|*.md|*.yaml|*.yml)
+          frontend_files+=("$file")
+          frontend_rel_files+=("${file#frontend/}")
+          ;;
+      esac
+      ;;
+    game-backend/*.go|game-backend/**/*.go)
+      game_go_files+=("$file")
+      ;;
+    questions-backend/*.go|questions-backend/**/*.go)
+      questions_go_files+=("$file")
+      ;;
+  esac
+done
+
+if [[ ${#frontend_files[@]} -gt 0 ]]; then
+  echo "Formatting frontend staged files with Prettier..."
+  pnpm --dir frontend exec prettier --write "${frontend_rel_files[@]}"
+  git add "${frontend_files[@]}"
+fi
+
+if [[ ${#game_go_files[@]} -gt 0 ]]; then
+  echo "Formatting game-backend staged Go files with gofmt..."
+  gofmt -w "${game_go_files[@]}"
+  git add "${game_go_files[@]}"
+fi
+
+if [[ ${#questions_go_files[@]} -gt 0 ]]; then
+  echo "Formatting questions-backend staged Go files with gofmt..."
+  gofmt -w "${questions_go_files[@]}"
+  git add "${questions_go_files[@]}"
+fi
