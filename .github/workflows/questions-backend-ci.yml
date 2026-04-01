@@ -1,4 +1,4 @@
-name: Questions Backend CI
+name: Questions Backend
 
 on:
   push:
