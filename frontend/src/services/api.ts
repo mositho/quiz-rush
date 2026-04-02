@@ -17,6 +17,11 @@ export class ApiError extends Error {
 function buildApiUrl(path: string) {
   const normalizedBaseUrl = apiBaseUrl.endsWith("/") ? apiBaseUrl : `${apiBaseUrl}/`;
   const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
+  const hasAbsoluteBaseUrl = /^https?:\/\//i.test(normalizedBaseUrl);
+
+  if (hasAbsoluteBaseUrl) {
+    return new URL(normalizedPath, normalizedBaseUrl).toString();
+  }
 
   return new URL(normalizedPath, window.location.origin + normalizedBaseUrl).toString();
 }
