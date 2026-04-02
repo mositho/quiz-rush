@@ -1,0 +1,46 @@
+services:
+    game-postgres:
+        ports: !reset []
+        restart: unless-stopped
+        environment:
+            POSTGRES_PASSWORD: ${GAME_POSTGRES_PASSWORD:?GAME_POSTGRES_PASSWORD is required}
+
+    keycloak-postgres:
+        restart: unless-stopped
+        environment:
+            POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+
+    questions-backend:
+        ports: !reset []
+        restart: unless-stopped
+        environment:
+            CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:?CORS_ALLOWED_ORIGIN is required}
+
+    keycloak:
+        command: ["start", "--import-realm"]
+        restart: unless-stopped
+        environment:
+            KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+            KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+            KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:?KEYCLOAK_HOSTNAME is required}
+            KC_HOSTNAME_STRICT: "true"
+        volumes:
+            - ./keycloak/realm-export.prod.json:/opt/keycloak/data/import/realm-export.json:ro
+
+    game-backend:
+        ports: !reset []
+        restart: unless-stopped
+        environment:
+            CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:?CORS_ALLOWED_ORIGIN is required}
+            KEYCLOAK_ISSUER_URL: ${KEYCLOAK_ISSUER_URL:?KEYCLOAK_ISSUER_URL is required}
+            KEYCLOAK_INTERNAL_ISSUER_URL: ${KEYCLOAK_INTERNAL_ISSUER_URL:-http://keycloak:8080/account/realms/quiz-rush}
+
+    frontend:
+        ports: !reset []
+        restart: unless-stopped
+        build:
+            args:
+                VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+                VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:?VITE_KEYCLOAK_URL is required}
+                VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-quiz-rush}
+                VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-quiz-rush-app}

@@ -301,6 +301,35 @@ Start everything with:
 docker compose up --build
 ```
 
+### Production compose override
+
+The production setup uses a second compose file that overrides local development defaults.
+
+Use this command order so production settings win:
+
+```sh
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Production-specific behavior in the override:
+
+- No service publishes host ports
+- Keycloak runs in production mode with `start --import-realm`
+- Required secrets and URLs fail fast when missing
+- Keycloak imports `keycloak/realm-export.prod.json`
+
+Minimum required variables in `.env.prod`:
+
+- `GAME_POSTGRES_PASSWORD`
+- `KEYCLOAK_DB_PASSWORD`
+- `KEYCLOAK_ADMIN_PASSWORD`
+- `KEYCLOAK_HOSTNAME`
+- `KEYCLOAK_ISSUER_URL`
+- `CORS_ALLOWED_ORIGIN`
+- `VITE_KEYCLOAK_URL`
+
+Update `keycloak/realm-export.prod.json` with your real frontend domain before deployment.
+
 If you changed Postgres usernames/database names and see errors like `FATAL: role ... does not exist`, recreate the database volumes once:
 
 ```sh

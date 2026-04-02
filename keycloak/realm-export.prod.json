@@ -1,0 +1,31 @@
+{
+    "realm": "quiz-rush",
+    "enabled": true,
+    "displayName": "Quiz Rush",
+    "registrationAllowed": true,
+    "loginWithEmailAllowed": false,
+    "duplicateEmailsAllowed": true,
+    "verifyEmail": false,
+    "registrationEmailAsUsername": false,
+    "rememberMe": true,
+    "resetPasswordAllowed": true,
+    "clients": [
+        {
+            "clientId": "quiz-rush-app",
+            "name": "Quiz Rush Frontend",
+            "enabled": true,
+            "publicClient": true,
+            "standardFlowEnabled": true,
+            "directAccessGrantsEnabled": false,
+            "implicitFlowEnabled": false,
+            "serviceAccountsEnabled": false,
+            "protocol": "openid-connect",
+            "redirectUris": ["https://quiz-rush.mh-home.net/*"],
+            "webOrigins": ["https://quiz-rush.mh-home.net"],
+            "attributes": {
+                "pkce.code.challenge.method": "S256",
+                "post.logout.redirect.uris": "+"
+            }
+        }
+    ]
+}
