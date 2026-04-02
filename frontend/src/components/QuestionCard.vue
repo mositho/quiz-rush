@@ -17,17 +17,17 @@
 <script setup lang="ts">
 import type { Question } from "@/types/apiResponses";
 
-const props = defineProps<{
+defineProps<{
   question: Question;
 }>();
+
 const emit = defineEmits<{
   (e: "answerSelected", index: number): void;
 }>();
 
 function selectAnswer(index: number) {
-  emit('answerSelected', index);
+  emit("answerSelected", index);
 }
-
 </script>
 
 <style scoped>
