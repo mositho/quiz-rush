@@ -115,6 +115,12 @@ Tracked example files are included alongside them:
 Use Docker Compose with the dev override:
 
 ```sh
+make dev
+```
+
+Equivalent raw command:
+
+```sh
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
@@ -143,7 +149,7 @@ For Docker-based frontend development with Vue hot module replacement, use the n
 Start the stack with:
 
 ```sh
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+make dev
 ```
 
 Then open the frontend at `http://localhost:5173`.
@@ -280,3 +286,36 @@ VITE_KEYCLOAK_URL=http://localhost/account
 VITE_KEYCLOAK_REALM=quiz-rush
 VITE_KEYCLOAK_CLIENT_ID=quiz-rush-app
 ```
+
+## Bruno API Collections
+
+
+- [bruno/game-backend](/home/moritz/workspace/school/quiz-rush/bruno/game-backend)
+  Anonymous smoke flow for the game API through the public Docker entrypoint.
+- [bruno/questions-backend](/home/moritz/workspace/school/quiz-rush/bruno/questions-backend)
+  Smoke flow for the questions API on its direct Docker-exposed port.
+
+There is also a short overview in [bruno/README.md](/home/moritz/workspace/school/quiz-rush/bruno/README.md).
+
+Recommended usage:
+
+1. Start the dev stack:
+   `make dev`
+2. Open either collection folder in Bruno.
+3. Select the matching environment for that collection.
+   For the game backend, `direct` matches the dev compose stack best.
+4. Run the requests in order or run the whole collection.
+
+Current collection coverage:
+
+- Game backend: smoke flow, Keycloak-backed auth setup, authenticated session flow, user scores, score lookup, user stats, leaderboard
+- Questions backend: `00 Smoke` flow with health, list sets, fetch set questions
+
+For the authenticated Bruno requests, the dev realm export enables direct grants on `quiz-rush-app` and includes a reusable test user in [keycloak/realm-export.json](/home/moritz/workspace/school/quiz-rush/keycloak/realm-export.json). Production stays stricter in [keycloak/realm-export.prod.json](/home/moritz/workspace/school/quiz-rush/keycloak/realm-export.prod.json), where direct grants remain disabled. If Keycloak was already initialized before this change, recreate the dev Keycloak data once so the imported realm is applied again:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v keycloak keycloak-postgres
+make dev
+```
+
+In Bruno, keep `username` and `password` in the selected game-backend environment, or mark them as secrets in Bruno's UI if your installed version supports that. The login request then populates the runtime `accessToken` automatically.
