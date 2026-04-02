@@ -316,7 +316,8 @@ Production-specific behavior in the override:
 - No service publishes host ports
 - Keycloak runs in production mode with `start --import-realm`
 - Required secrets and URLs fail fast when missing
-- Keycloak imports `keycloak/realm-export.prod.json`
+- Keycloak imports the file selected by `KEYCLOAK_IMPORT_FILE`
+- `game-backend` and `questions-backend` are built as container images (no source-code bind mount required)
 
 Minimum required variables in `.env.prod`:
 
@@ -324,6 +325,7 @@ Minimum required variables in `.env.prod`:
 - `KEYCLOAK_DB_PASSWORD`
 - `KEYCLOAK_ADMIN_PASSWORD`
 - `KEYCLOAK_HOSTNAME`
+- `KEYCLOAK_IMPORT_FILE=./keycloak/realm-export.prod.json`
 - `KEYCLOAK_ISSUER_URL`
 - `CORS_ALLOWED_ORIGIN`
 - `VITE_KEYCLOAK_URL`
