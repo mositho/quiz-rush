@@ -21,3 +21,4 @@ questions-backend/bin/
 # pnpm store
 .pnpm-store/
 */.pnpm-store/
+.pnpm-lock.yaml
