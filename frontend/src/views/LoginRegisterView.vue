@@ -14,8 +14,6 @@
 </template>
 
 <script setup lang="ts">
-/* eslint-disable no-undef */
-
 import { ref } from "vue";
 
 const username = ref("");

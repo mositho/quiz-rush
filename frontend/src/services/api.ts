@@ -1,3 +1,5 @@
+import type { StartSessionRequest } from "@/types/apiRequests";
+import type { Session, SubmitAnswerResult, QuestionSet } from "@/types/apiResponses";
 import { getAccessToken, refreshKeycloakToken } from "./keycloak";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -54,4 +56,38 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
 
   return (await response.json()) as T;
+}
+
+export async function startSession(request: StartSessionRequest): Promise<Session> {
+  return apiFetch<Session>("/game/sessions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+}
+
+export async function getSession(sessionId: string): Promise<Session> {
+  return apiFetch<Session>(`/game/sessions/${sessionId}`);
+}
+
+export async function getQuestionSets(): Promise<QuestionSet[]> {
+  return apiFetch<QuestionSet[]>("/game/question-sets");
+}
+
+export async function submitAnswer(
+  sessionId: string,
+  answerIndex: number
+): Promise<{ session: Session; result: SubmitAnswerResult }> {
+  return apiFetch<{ session: Session; result: SubmitAnswerResult }>(
+    `/game/sessions/${sessionId}/answers`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ selectedAnswerIndex: answerIndex }),
+    }
+  );
 }

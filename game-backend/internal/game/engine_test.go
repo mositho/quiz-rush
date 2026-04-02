@@ -51,7 +51,7 @@ func TestSubmitCorrectAnswerAdvancesAndScores(t *testing.T) {
 	}
 }
 
-func TestWrongAnswerTriggersCooldownUntilSynced(t *testing.T) {
+func TestWrongAnswerDeductsTimeAndAdvancesImmediately(t *testing.T) {
 	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
 
 	session := mustNewSession(t, game.SessionConfig{
@@ -60,27 +60,46 @@ func TestWrongAnswerTriggersCooldownUntilSynced(t *testing.T) {
 		ConfigurationKey:       "duration=180|sets=lf1",
 	}, testQuestions(), now)
 
-	result, err := session.SubmitAnswer(now.Add(2*time.Second), 0)
+	expectedEndsAt := session.EndsAt.Add(-3 * time.Second)
+
+	result, err := session.SubmitAnswer(now.Add(2*time.Second), 0) // wrong answer (correct is index 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	assertEqual(t, result.Correct, false)
-	assertEqual(t, session.Status, game.SessionStatusCooldown)
-	if result.CooldownUntil == nil {
-		t.Fatal("expected cooldown timestamp")
-	}
+	assertEqual(t, session.Status, game.SessionStatusActive)
+	assertEqual(t, session.EndsAt.UTC(), expectedEndsAt.UTC())
 
-	if _, currentQuestionErr := session.CurrentQuestion(now.Add(3 * time.Second)); currentQuestionErr == nil {
-		t.Fatal("expected cooldown to block current question")
+	// Next question is immediately available — no cooldown block
+	question, err := session.CurrentQuestion(now.Add(2 * time.Second))
+	if err != nil {
+		t.Fatal(err)
 	}
+	assertEqual(t, question.QuestionID, "q2")
+}
 
-	question, err := session.CurrentQuestion(now.Add(6 * time.Second))
+func TestWrongAnswerWithInsufficientTimeFinishesSession(t *testing.T) {
+	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+
+	// Only 2 seconds left — a wrong answer (3s penalty) should exhaust the timer
+	session := mustNewSession(t, game.SessionConfig{
+		DurationSeconds:        2,
+		SelectedQuestionSetIDs: []string{"lf1"},
+		ConfigurationKey:       "duration=2|sets=lf1",
+	}, testQuestions(), now)
+
+	result, err := session.SubmitAnswer(now.Add(1*time.Second), 0) // wrong answer
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assertEqual(t, question.QuestionID, "q2")
+	assertEqual(t, result.Correct, false)
+	assertEqual(t, result.Finished, true)
+	if result.FinishReason == nil || *result.FinishReason != game.FinishReasonTimerElapsed {
+		t.Fatalf("got finish reason %v, want %q", result.FinishReason, game.FinishReasonTimerElapsed)
+	}
+	assertEqual(t, session.Status, game.SessionStatusFinished)
 }
 
 func TestTimerElapsedFinishesSessionAndProducesScoreResult(t *testing.T) {

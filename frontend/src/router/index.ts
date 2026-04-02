@@ -13,5 +13,10 @@ export const router = createRouter({
       name: "login",
       component: () => import("../views/LoginRegisterView.vue"),
     },
+    {
+      path: "/game/:sessionId",
+      name: "gameplay",
+      component: () => import("../views/GameplayView.vue"),
+    },
   ],
 });
