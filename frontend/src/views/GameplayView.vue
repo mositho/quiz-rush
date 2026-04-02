@@ -14,15 +14,13 @@
         v-if="session.currentQuestion"
         :question="session.currentQuestion"
         @select="sendAnswer"
-      />
-    
+      />    
       <div v-else class="gameplay-view__finished">
         <h2>Game Finished!</h2>
         <p>Final Score: {{ session.currentScore }}</p>
         <p>Correct: {{ session.correctQuestions }} / {{ session.answeredQuestions }}</p>
         <button @click="goHome">Back to Home</button>
       </div>
-    
     </div>
   </div>
 </template>
@@ -39,7 +37,7 @@ const { session, loading, error, loadSession, confirmAnswer } = useGameSession()
 onMounted(async () => {
   const sessionId = route.params.sessionId as string;
   if (sessionId) {
-    session.value = await loadSession(sessionId);
+    await loadSession(sessionId);
   } else {
     router.push("/");
   }

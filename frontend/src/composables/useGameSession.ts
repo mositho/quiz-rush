@@ -2,6 +2,7 @@ import { ref, readonly } from "vue";
 import type { Session } from "@/types/apiResponses";
 import type { StartSessionRequest } from "@/types/apiRequests";
 import { startSession as apiStartSession, submitAnswer as apiSubmitAnswer, getSession } from "@/services/api";
+import { router } from "@/router";
 
 const session = ref<Session | null>(null);
 const loading = ref(false);
@@ -13,8 +14,8 @@ export function useGameSession() {
     loading.value = true;
     error.value = null;
     try {
-      const newSession = await apiStartSession(request);
-      session.value = newSession;
+      session.value = await apiStartSession(request);
+      router.push(`/game/${session.value.sessionId}`);
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to start new session";
       session.value = null;

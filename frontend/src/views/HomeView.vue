@@ -1,4 +1,3 @@
-//TODO Add a play button if logged in and check change logic based on login status.
 <template>
   <main class="home-view">
     <section class="home-view__panel">
@@ -76,10 +75,9 @@ interface RequestResult {
 }
 
 const router = useRouter();
-const { session, loading: sessionLoading, startNewSession } = useGameSession();
-
-const loading = ref(false);
+const { session, startNewSession } = useGameSession();
 const lastResult = ref<RequestResult | null>(null);
+const loading = ref(false);
 function handleLogin() {
   void loginWithKeycloak();
 }
@@ -147,14 +145,9 @@ function mapError(label: string, error: unknown): RequestResult {
 }
 
 async function startGame() {
-  // Placeholder for starting a game session
   await startNewSession({
     durationSeconds: 180,
     selectedQuestionSetIds: ["lf1", "lf2"],
-  }).then(() => {
-    if (session.value?.sessionId) {
-      router.push(`/game/${session.value.sessionId}`);
-    }
   });
 }
 </script>

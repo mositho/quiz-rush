@@ -7,9 +7,8 @@
         :key="index"
         class="answer-btn"
         @click="selectAnswer(index)"
-        v-text=option.text
-        >
-
+      >
+        {{ option }}
       </button>
     </div>
   </div>
@@ -55,7 +54,7 @@ function selectAnswer(index: number) {
   gap: 1rem;
   padding: 1rem;
   border-radius: 12px;
-  background: #f3f4f6;
+  background: #00d9ff;
   cursor: pointer;
   border: 2px solid transparent;
   transition: all 0.2s;
