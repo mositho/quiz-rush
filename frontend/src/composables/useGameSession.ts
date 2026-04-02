@@ -26,7 +26,7 @@ export function useGameSession() {
 
   async function confirmAnswer(answerIndex: number) {
     if (!session.value?.sessionId || submitting.value) return;
-    
+
     submitting.value = true;
     error.value = null;
     try {
@@ -38,6 +38,19 @@ export function useGameSession() {
       submitting.value = false;
     }
   }
+
+  async function loadSession(sessionId: string) {
+    loading.value = true;
+    error.value = null;
+    try {
+      session.value = await getSession(sessionId);
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : "Failed to load session";
+      session.value = null;
+    } finally {
+      loading.value = false;
+    }
+  }
   return {
     session: readonly(session),
     loading: readonly(loading),
@@ -45,7 +58,7 @@ export function useGameSession() {
     error: readonly(error),
     startNewSession,
     confirmAnswer,
-  
+    loadSession,
   };
 }
 

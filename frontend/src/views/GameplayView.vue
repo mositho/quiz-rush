@@ -29,17 +29,20 @@
 
 <script setup lang="ts">
 import { onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useGameSession } from "@/composables/useGameSession";
 
 const router = useRouter();
-const { session, loading, error, startNewSession, confirmAnswer } = useGameSession();
+const route = useRoute();
+const { session, loading, error, loadSession, confirmAnswer } = useGameSession();
 
-onMounted(() => {
-  startNewSession({
-    durationSeconds: 180,
-    selectedQuestionSetIds: ["lf1", "lf2"]
-  });
+onMounted(async () => {
+  const sessionId = route.params.sessionId as string;
+  if (sessionId) {
+    session.value = await loadSession(sessionId);
+  } else {
+    router.push("/");
+  }
 });
 
 function sendAnswer(index: number) {

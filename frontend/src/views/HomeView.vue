@@ -3,6 +3,7 @@
   <main class="home-view">
     <section class="home-view__panel">
       <h1>Quiz Rush</h1>
+
       <p class="home-view__status">
         <span v-if="authState.initialized && authState.authenticated">
           Signed in as {{ authState.username }}.
@@ -10,6 +11,7 @@
         <span v-else-if="authState.initialized">Not signed in.</span>
         <span v-else>Checking session...</span>
       </p>
+
       <div class="home-view__actions">
         <button v-if="!authState.authenticated" type="button" @click="handleLogin">
           Sign in with Keycloak
@@ -44,14 +46,19 @@
         <pre>{{ lastResult.body }}</pre>
       </div>
     </section>
+    <section>
+      <button @click="startGame">Start Game</button>
+    </section>
   </main>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 
 import { ApiError, apiFetch } from "../services/api";
 import { authState, loginWithKeycloak, logoutFromKeycloak } from "../services/keycloak";
+import { useGameSession } from "@/composables/useGameSession";
 
 interface LeaderboardResponse {
   packageSlug: string;
@@ -68,9 +75,11 @@ interface RequestResult {
   body: string;
 }
 
+const router = useRouter();
+const { session, loading: sessionLoading, startNewSession } = useGameSession();
+
 const loading = ref(false);
 const lastResult = ref<RequestResult | null>(null);
-
 function handleLogin() {
   void loginWithKeycloak();
 }
@@ -135,6 +144,18 @@ function mapError(label: string, error: unknown): RequestResult {
     status: "error",
     body: error instanceof Error ? error.message : "Unknown error",
   };
+}
+
+async function startGame() {
+  // Placeholder for starting a game session
+  await startNewSession({
+    durationSeconds: 180,
+    selectedQuestionSetIds: ["lf1", "lf2"],
+  }).then(() => {
+    if (session.value?.sessionId) {
+      router.push(`/game/${session.value.sessionId}`);
+    }
+  });
 }
 </script>
 
