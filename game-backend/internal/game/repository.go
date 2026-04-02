@@ -621,13 +621,13 @@ func (r *sessionRepository) ListLeaderboard(ctx context.Context, configurationKe
 	}
 
 	var rows []struct {
-		ScoreID           string    `db:"id"`
-		Score             int       `db:"score"`
-		FinishedAt        time.Time `db:"finished_at"`
-		ConfigurationKey  string    `db:"configuration_key"`
-		PlayerID          string    `db:"player_id"`
-		PlayerPublicUserID string   `db:"player_public_user_id"`
-		PlayerDisplayName string    `db:"player_display_name"`
+		ScoreID            string    `db:"id"`
+		Score              int       `db:"score"`
+		FinishedAt         time.Time `db:"finished_at"`
+		ConfigurationKey   string    `db:"configuration_key"`
+		PlayerID           string    `db:"player_id"`
+		PlayerPublicUserID string    `db:"player_public_user_id"`
+		PlayerDisplayName  string    `db:"player_display_name"`
 	}
 	err := pgxscan.Select(ctx, r.db, &rows, query, args...)
 	if err != nil {
