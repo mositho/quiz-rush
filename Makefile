@@ -1,4 +1,4 @@
-.PHONY: dev dev-bg dev-down dev-logs dev-restart
+.PHONY: setup setup-hooks dev dev-bg dev-down dev-logs dev-restart
 
 COMPOSE_DEV = docker compose -f docker-compose.yml -f docker-compose.dev.yml
 
@@ -17,3 +17,8 @@ dev-logs:
 dev-restart:
 	make dev-down
 	make dev-bg
+
+setup: setup-hooks
+
+setup-hooks:
+	git config core.hooksPath .githooks

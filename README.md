@@ -110,6 +110,14 @@ Tracked example files are included alongside them:
 - `game-backend/.env.example`
 - `frontend/.env.example`
 
+### One-time repo setup
+
+Enable the tracked Git hooks for this clone with:
+
+```sh
+make setup
+```
+
 ### Recommended development workflow
 
 Use Docker Compose with the dev override:
