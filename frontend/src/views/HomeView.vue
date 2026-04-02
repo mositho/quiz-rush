@@ -36,7 +36,7 @@
           <p v-if="setsLoading" class="hint">Loading sets…</p>
           <p v-else-if="setsError" class="hint hint--error">{{ setsError }}</p>
           <label v-for="set in questionSets" :key="set.id" class="checkbox">
-            <input type="checkbox" :value="set.id" v-model="selectedSetIds" />
+            <input v-model="selectedSetIds" type="checkbox" :value="set.id" />
             <span class="checkbox__label"
               >{{ set.name }} <em class="hint">({{ set.length }} questions)</em></span
             >

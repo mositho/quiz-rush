@@ -1,7 +1,11 @@
 import { ref, readonly } from "vue";
 import type { Session } from "@/types/apiResponses";
 import type { StartSessionRequest } from "@/types/apiRequests";
-import { startSession as apiStartSession, submitAnswer as apiSubmitAnswer, getSession } from "@/services/api";
+import {
+  getSession,
+  startSession as apiStartSession,
+  submitAnswer as apiSubmitAnswer,
+} from "@/services/api";
 import { router } from "@/router";
 
 const session = ref<Session | null>(null);
@@ -24,7 +28,6 @@ export function useGameSession() {
       loading.value = false;
     }
   }
-
 
   async function confirmAnswer(answerIndex: number) {
     if (!session.value?.sessionId || submitting.value) return;
@@ -53,6 +56,7 @@ export function useGameSession() {
       loading.value = false;
     }
   }
+
   return {
     session: readonly(session),
     loading: readonly(loading),
@@ -63,4 +67,3 @@ export function useGameSession() {
     loadSession,
   };
 }
-
