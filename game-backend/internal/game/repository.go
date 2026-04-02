@@ -823,7 +823,6 @@ func loadSessionRow(ctx context.Context, db dbTX, sessionID string, lock bool) (
 			finish_reason,
 			started_at,
 			ends_at,
-			cooldown_until,
 			finished_at,
 			save_deadline_at,
 			duration_seconds,
@@ -991,6 +990,7 @@ func updateSessionRow(ctx context.Context, tx dbTX, session *Session) error {
 		session.CorrectQuestions,
 		session.WrongQuestions,
 		session.CurrentScore,
+		session.EndsAt,
 	)
 	if err != nil {
 		return fmt.Errorf("update session: %w", err)
