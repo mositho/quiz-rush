@@ -28,7 +28,6 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 
 	for _, fileName := range files {
 		migrationPath := filepath.Join(migrationsDir, fileName)
-		// #nosec G304 -- migrationPath is derived from files enumerated from the migrations directory.
 		contents, err := os.ReadFile(migrationPath)
 		if err != nil {
 			return fmt.Errorf("read migration %s: %w", migrationPath, err)

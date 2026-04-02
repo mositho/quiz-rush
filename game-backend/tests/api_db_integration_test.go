@@ -295,7 +295,6 @@ func startTestDatabase(ctx context.Context) (connectionString string, terminate 
 
 	dbName := "quiz_rush_game_test"
 	username := "quiz_rush_game_test"
-	// #nosec G101 -- test-only credentials for an ephemeral local container.
 	password := "quiz_rush_game_test"
 
 	container, err := postgres.Run(
