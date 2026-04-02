@@ -12,6 +12,7 @@ import (
 
 	"quiz-rush/game-backend/internal/middleware"
 
+	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,36 +30,36 @@ type sessionRepository struct {
 }
 
 type userProfile struct {
-	ID           string
-	PublicUserID string
-	DisplayName  string
+	ID           string `db:"id"`
+	PublicUserID string `db:"public_user_id"`
+	DisplayName  string `db:"display_name"`
 }
 
 type storedScore struct {
-	ScoreID                string
-	SessionID              string
-	FinishedAt             time.Time
-	FinishReason           FinishReason
-	Score                  int
-	CorrectQuestions       int
-	WrongQuestions         int
-	AnsweredQuestions      int
-	TotalQuestions         int
-	DurationSeconds        int
-	PlayedMs               int64
-	SelectedQuestionSetIDs []string
-	ConfigurationKey       string
-	QuestionResults        []ScoreQuestionResult
-	Player                 *userProfile
+	ScoreID                string                `db:"id"`
+	SessionID              string                `db:"session_id"`
+	FinishedAt             time.Time             `db:"finished_at"`
+	FinishReason           FinishReason          `db:"finish_reason"`
+	Score                  int                   `db:"score"`
+	CorrectQuestions       int                   `db:"correct_questions"`
+	WrongQuestions         int                   `db:"wrong_questions"`
+	AnsweredQuestions      int                   `db:"answered_questions"`
+	TotalQuestions         int                   `db:"total_questions"`
+	DurationSeconds        int                   `db:"duration_seconds"`
+	PlayedMs               int64                 `db:"played_ms"`
+	SelectedQuestionSetIDs []string              `db:"selected_question_set_ids"`
+	ConfigurationKey       string                `db:"configuration_key"`
+	QuestionResults        []ScoreQuestionResult `db:"question_results_json"`
+	Player                 *userProfile          `db:"-"`
 }
 
 type leaderboardEntry struct {
-	Rank             int
-	ScoreID          string
-	Score            int
-	FinishedAt       time.Time
-	ConfigurationKey string
-	Player           userProfile
+	Rank             int         `db:"-"`
+	ScoreID          string      `db:"id"`
+	Score            int         `db:"score"`
+	FinishedAt       time.Time   `db:"finished_at"`
+	ConfigurationKey string      `db:"configuration_key"`
+	Player           userProfile `db:"*"`
 }
 
 type userStats struct {
@@ -70,6 +71,7 @@ type userStats struct {
 
 type dbTX interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
@@ -83,10 +85,13 @@ func (r *sessionRepository) EnsureUserProfile(ctx context.Context, user middlewa
 		displayName = user.Subject
 	}
 
-	publicUserID := newPublicUserID()
+	publicUserID, err := newPublicUserID()
+	if err != nil {
+		return "", fmt.Errorf("generate public user id: %w", err)
+	}
 
 	var id string
-	err := r.db.QueryRow(
+	err = r.db.QueryRow(
 		ctx,
 		`
 		insert into user_profiles (public_user_id, keycloak_subject, display_name)
@@ -108,8 +113,11 @@ func (r *sessionRepository) EnsureUserProfile(ctx context.Context, user middlewa
 }
 
 func (r *sessionRepository) GetProfileByID(ctx context.Context, id string) (*userProfile, error) {
-	row := r.db.QueryRow(
+	var profile userProfile
+	err := pgxscan.Get(
 		ctx,
+		r.db,
+		&profile,
 		`
 		select id, public_user_id, display_name
 		from user_profiles
@@ -117,9 +125,7 @@ func (r *sessionRepository) GetProfileByID(ctx context.Context, id string) (*use
 		`,
 		id,
 	)
-
-	var profile userProfile
-	if err := row.Scan(&profile.ID, &profile.PublicUserID, &profile.DisplayName); errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrProfileNotFound
 	} else if err != nil {
 		return nil, fmt.Errorf("get profile by id: %w", err)
@@ -129,8 +135,11 @@ func (r *sessionRepository) GetProfileByID(ctx context.Context, id string) (*use
 }
 
 func (r *sessionRepository) GetProfileByPublicUserID(ctx context.Context, publicUserID string) (*userProfile, error) {
-	row := r.db.QueryRow(
+	var profile userProfile
+	err := pgxscan.Get(
 		ctx,
+		r.db,
+		&profile,
 		`
 		select id, public_user_id, display_name
 		from user_profiles
@@ -138,9 +147,7 @@ func (r *sessionRepository) GetProfileByPublicUserID(ctx context.Context, public
 		`,
 		publicUserID,
 	)
-
-	var profile userProfile
-	if err := row.Scan(&profile.ID, &profile.PublicUserID, &profile.DisplayName); errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrProfileNotFound
 	} else if err != nil {
 		return nil, fmt.Errorf("get profile by public user id: %w", err)
@@ -185,7 +192,7 @@ func (r *sessionRepository) CreateSession(
 }
 
 func (r *sessionRepository) LoadSession(ctx context.Context, sessionID string) (*Session, *string, bool, error) {
-	session, ownerProfileID, isAnonymous, err := loadSessionRow(ctx, r.db, sessionID)
+	session, ownerProfileID, isAnonymous, err := loadSessionRow(ctx, r.db, sessionID, false)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -196,6 +203,49 @@ func (r *sessionRepository) LoadSession(ctx context.Context, sessionID string) (
 	}
 
 	session.SessionQuestions = sessionQuestions
+
+	return session, ownerProfileID, isAnonymous, nil
+}
+
+func (r *sessionRepository) UpdateLockedSession(
+	ctx context.Context,
+	sessionID string,
+	mutate func(session *Session, ownerProfileID *string, isAnonymous bool) error,
+) (*Session, *string, bool, error) {
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, nil, false, fmt.Errorf("begin locked session transaction: %w", err)
+	}
+	defer func() {
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
+			log.Printf("failed to rollback locked session transaction: %v", rollbackErr)
+		}
+	}()
+
+	session, ownerProfileID, isAnonymous, err := loadSessionRow(ctx, tx, sessionID, true)
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	sessionQuestions, err := loadSessionQuestions(ctx, tx, sessionID)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	session.SessionQuestions = sessionQuestions
+
+	if err := mutate(session, ownerProfileID, isAnonymous); err != nil {
+		return nil, nil, false, err
+	}
+
+	if err := updateSessionRow(ctx, tx, session); err != nil {
+		return nil, nil, false, err
+	}
+	if err := updateSessionQuestions(ctx, tx, session.ID, session.SessionQuestions); err != nil {
+		return nil, nil, false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, nil, false, fmt.Errorf("commit locked session transaction: %w", err)
+	}
 
 	return session, ownerProfileID, isAnonymous, nil
 }
@@ -408,8 +458,17 @@ func (r *sessionRepository) LinkAnonymousSessionScore(
 }
 
 func (r *sessionRepository) GetScore(ctx context.Context, scoreID string) (*storedScore, error) {
-	row := r.db.QueryRow(
+	var scoreRow struct {
+		storedScore
+		PlayerID          string `db:"player_id"`
+		PlayerPublicID    string `db:"player_public_user_id"`
+		PlayerDisplayName string `db:"player_display_name"`
+	}
+
+	err := pgxscan.Get(
 		ctx,
+		r.db,
+		&scoreRow,
 		`
 		select
 			s.id,
@@ -426,17 +485,15 @@ func (r *sessionRepository) GetScore(ctx context.Context, scoreID string) (*stor
 			s.selected_question_set_ids,
 			s.configuration_key,
 			s.question_results_json,
-			u.id,
-			u.public_user_id,
-			u.display_name
+			u.id as player_id,
+			u.public_user_id as player_public_user_id,
+			u.display_name as player_display_name
 		from game_scores s
 		join user_profiles u on u.id = s.owner_profile_id
 		where s.id = $1 and s.is_public = true and s.is_saved = true
 		`,
 		scoreID,
 	)
-
-	score, err := scanStoredScoreWithPlayer(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrScoreNotFound
 	}
@@ -444,7 +501,14 @@ func (r *sessionRepository) GetScore(ctx context.Context, scoreID string) (*stor
 		return nil, fmt.Errorf("get score: %w", err)
 	}
 
-	return score, nil
+	score := scoreRow.storedScore
+	score.Player = &userProfile{
+		ID:           scoreRow.PlayerID,
+		PublicUserID: scoreRow.PlayerPublicID,
+		DisplayName:  scoreRow.PlayerDisplayName,
+	}
+
+	return &score, nil
 }
 
 func (r *sessionRepository) ListScoresByPublicUserID(ctx context.Context, publicUserID string) (*userProfile, []storedScore, error) {
@@ -453,8 +517,11 @@ func (r *sessionRepository) ListScoresByPublicUserID(ctx context.Context, public
 		return nil, nil, err
 	}
 
-	rows, err := r.db.Query(
+	var scores []storedScore
+	err = pgxscan.Select(
 		ctx,
+		r.db,
+		&scores,
 		`
 		select
 			s.id,
@@ -480,19 +547,6 @@ func (r *sessionRepository) ListScoresByPublicUserID(ctx context.Context, public
 	if err != nil {
 		return nil, nil, fmt.Errorf("list scores by public user id: %w", err)
 	}
-	defer rows.Close()
-
-	scores := make([]storedScore, 0)
-	for rows.Next() {
-		score, err := scanStoredScoreWithoutPlayer(rows)
-		if err != nil {
-			return nil, nil, err
-		}
-		scores = append(scores, score)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, nil, fmt.Errorf("iterate scores by public user id: %w", err)
-	}
 
 	return profile, scores, nil
 }
@@ -503,8 +557,17 @@ func (r *sessionRepository) GetUserStatsByPublicUserID(ctx context.Context, publ
 		return nil, userStats{}, err
 	}
 
-	row := r.db.QueryRow(
+	var statsRow struct {
+		GamesPlayed           int     `db:"count"`
+		BestScore             int     `db:"max"`
+		AverageScore          float64 `db:"avg"`
+		TotalCorrectQuestions int     `db:"sum"`
+	}
+
+	err = pgxscan.Get(
 		ctx,
+		r.db,
+		&statsRow,
 		`
 		select
 			count(*),
@@ -516,10 +579,15 @@ func (r *sessionRepository) GetUserStatsByPublicUserID(ctx context.Context, publ
 		`,
 		profile.ID,
 	)
-
-	var stats userStats
-	if err := row.Scan(&stats.GamesPlayed, &stats.BestScore, &stats.AverageScore, &stats.TotalCorrectQuestions); err != nil {
+	if err != nil {
 		return nil, userStats{}, fmt.Errorf("get user stats by public user id: %w", err)
+	}
+
+	stats := userStats{
+		GamesPlayed:           statsRow.GamesPlayed,
+		BestScore:             statsRow.BestScore,
+		AverageScore:          statsRow.AverageScore,
+		TotalCorrectQuestions: statsRow.TotalCorrectQuestions,
 	}
 
 	return profile, stats, nil
@@ -552,33 +620,15 @@ func (r *sessionRepository) ListLeaderboard(ctx context.Context, configurationKe
 		args = append(args, limit)
 	}
 
-	rows, err := r.db.Query(ctx, query, args...)
+	var entries []leaderboardEntry
+	err := pgxscan.Select(ctx, r.db, &entries, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list leaderboard: %w", err)
 	}
-	defer rows.Close()
 
-	entries := make([]leaderboardEntry, 0)
-	rank := 1
-	for rows.Next() {
-		var entry leaderboardEntry
-		if err := rows.Scan(
-			&entry.ScoreID,
-			&entry.Score,
-			&entry.FinishedAt,
-			&entry.ConfigurationKey,
-			&entry.Player.ID,
-			&entry.Player.PublicUserID,
-			&entry.Player.DisplayName,
-		); err != nil {
-			return nil, fmt.Errorf("scan leaderboard entry: %w", err)
-		}
-		entry.Rank = rank
-		rank++
-		entries = append(entries, entry)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate leaderboard entries: %w", err)
+	// Add rank to each entry
+	for i := range entries {
+		entries[i].Rank = i + 1
 	}
 
 	return entries, nil
@@ -604,87 +654,6 @@ func (r *sessionRepository) scoreIDBySessionID(ctx context.Context, tx pgx.Tx, s
 	}
 
 	return scoreID, nil
-}
-
-func scanStoredScoreWithoutPlayer(rows pgx.Rows) (storedScore, error) {
-	score, err := scanStoredScoreCore(rows, false)
-	if err != nil {
-		return storedScore{}, err
-	}
-
-	return *score, nil
-}
-
-type scoreScanner interface {
-	Scan(dest ...any) error
-}
-
-func scanStoredScoreWithPlayer(scanner scoreScanner) (*storedScore, error) {
-	return scanStoredScoreCore(scanner, true)
-}
-
-func scanStoredScoreCore(scanner scoreScanner, includePlayer bool) (*storedScore, error) {
-	var (
-		score                storedScore
-		finishReason         string
-		selectedQuestionSets []byte
-		questionResultsRaw   []byte
-	)
-
-	if includePlayer {
-		var player userProfile
-		if err := scanner.Scan(
-			&score.ScoreID,
-			&score.SessionID,
-			&score.FinishedAt,
-			&finishReason,
-			&score.Score,
-			&score.CorrectQuestions,
-			&score.WrongQuestions,
-			&score.AnsweredQuestions,
-			&score.TotalQuestions,
-			&score.DurationSeconds,
-			&score.PlayedMs,
-			&selectedQuestionSets,
-			&score.ConfigurationKey,
-			&questionResultsRaw,
-			&player.ID,
-			&player.PublicUserID,
-			&player.DisplayName,
-		); err != nil {
-			return nil, err
-		}
-		score.Player = &player
-	} else {
-		if err := scanner.Scan(
-			&score.ScoreID,
-			&score.SessionID,
-			&score.FinishedAt,
-			&finishReason,
-			&score.Score,
-			&score.CorrectQuestions,
-			&score.WrongQuestions,
-			&score.AnsweredQuestions,
-			&score.TotalQuestions,
-			&score.DurationSeconds,
-			&score.PlayedMs,
-			&selectedQuestionSets,
-			&score.ConfigurationKey,
-			&questionResultsRaw,
-		); err != nil {
-			return nil, err
-		}
-	}
-
-	score.FinishReason = FinishReason(finishReason)
-	if err := json.Unmarshal(selectedQuestionSets, &score.SelectedQuestionSetIDs); err != nil {
-		return nil, fmt.Errorf("unmarshal score selected question set ids: %w", err)
-	}
-	if err := json.Unmarshal(questionResultsRaw, &score.QuestionResults); err != nil {
-		return nil, fmt.Errorf("unmarshal score question results: %w", err)
-	}
-
-	return &score, nil
 }
 
 func insertSessionRow(
@@ -827,10 +796,30 @@ func insertSessionQuestionRow(ctx context.Context, tx dbTX, sessionID string, se
 	return nil
 }
 
-func loadSessionRow(ctx context.Context, db *pgxpool.Pool, sessionID string) (*Session, *string, bool, error) {
-	row := db.QueryRow(
-		ctx,
-		`
+func loadSessionRow(ctx context.Context, db dbTX, sessionID string, lock bool) (*Session, *string, bool, error) {
+	type sessionRow struct {
+		ID                     string     `db:"id"`
+		OwnerProfileID         *string    `db:"owner_profile_id"`
+		IsAnonymous            bool       `db:"is_anonymous"`
+		Status                 string     `db:"status"`
+		FinishReason           *string    `db:"finish_reason"`
+		StartedAt              time.Time  `db:"started_at"`
+		EndsAt                 time.Time  `db:"ends_at"`
+		CooldownUntil          *time.Time `db:"cooldown_until"`
+		FinishedAt             *time.Time `db:"finished_at"`
+		SaveDeadlineAt         *time.Time `db:"save_deadline_at"`
+		DurationSeconds        int        `db:"duration_seconds"`
+		SelectedQuestionSetIDs []string   `db:"selected_question_set_ids"`
+		ConfigurationKey       string     `db:"configuration_key"`
+		CurrentQuestionIndex   *int       `db:"current_question_index"`
+		TotalQuestions         int        `db:"total_questions"`
+		AnsweredQuestions      int        `db:"answered_questions"`
+		CorrectQuestions       int        `db:"correct_questions"`
+		WrongQuestions         int        `db:"wrong_questions"`
+		CurrentScore           int        `db:"current_score"`
+	}
+
+	query := `
 		select
 			id,
 			owner_profile_id,
@@ -853,39 +842,13 @@ func loadSessionRow(ctx context.Context, db *pgxpool.Pool, sessionID string) (*S
 			current_score
 		from game_sessions
 		where id = $1
-		`,
-		sessionID,
-	)
+	`
+	if lock {
+		query += " for update"
+	}
 
-	var (
-		session                   Session
-		ownerProfileID            *string
-		isAnonymous               bool
-		status                    string
-		finishReason              *string
-		selectedQuestionSetIDsRaw []byte
-	)
-	err := row.Scan(
-		&session.ID,
-		&ownerProfileID,
-		&isAnonymous,
-		&status,
-		&finishReason,
-		&session.StartedAt,
-		&session.EndsAt,
-		&session.CooldownUntil,
-		&session.FinishedAt,
-		&session.SaveDeadlineAt,
-		&session.DurationSeconds,
-		&selectedQuestionSetIDsRaw,
-		&session.ConfigurationKey,
-		&session.CurrentQuestionIndex,
-		&session.TotalQuestions,
-		&session.AnsweredQuestions,
-		&session.CorrectQuestions,
-		&session.WrongQuestions,
-		&session.CurrentScore,
-	)
+	var row sessionRow
+	err := pgxscan.Get(ctx, db, &row, query, sessionID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil, false, ErrSessionNotFound
 	}
@@ -893,21 +856,56 @@ func loadSessionRow(ctx context.Context, db *pgxpool.Pool, sessionID string) (*S
 		return nil, nil, false, fmt.Errorf("load session: %w", err)
 	}
 
-	session.Status = SessionStatus(status)
-	if finishReason != nil {
-		reason := FinishReason(*finishReason)
+	session := &Session{
+		ID:                     row.ID,
+		Status:                 SessionStatus(row.Status),
+		StartedAt:              row.StartedAt,
+		EndsAt:                 row.EndsAt,
+		CooldownUntil:          row.CooldownUntil,
+		FinishedAt:             row.FinishedAt,
+		SaveDeadlineAt:         row.SaveDeadlineAt,
+		DurationSeconds:        row.DurationSeconds,
+		SelectedQuestionSetIDs: row.SelectedQuestionSetIDs,
+		ConfigurationKey:       row.ConfigurationKey,
+		CurrentQuestionIndex:   row.CurrentQuestionIndex,
+		TotalQuestions:         row.TotalQuestions,
+		AnsweredQuestions:      row.AnsweredQuestions,
+		CorrectQuestions:       row.CorrectQuestions,
+		WrongQuestions:         row.WrongQuestions,
+		CurrentScore:           row.CurrentScore,
+	}
+	if row.FinishReason != nil {
+		reason := FinishReason(*row.FinishReason)
 		session.FinishReason = &reason
 	}
-	if err := json.Unmarshal(selectedQuestionSetIDsRaw, &session.SelectedQuestionSetIDs); err != nil {
-		return nil, nil, false, fmt.Errorf("unmarshal selected question set ids: %w", err)
-	}
 
-	return &session, ownerProfileID, isAnonymous, nil
+	return session, row.OwnerProfileID, row.IsAnonymous, nil
 }
 
-func loadSessionQuestions(ctx context.Context, db *pgxpool.Pool, sessionID string) ([]SessionQuestion, error) {
-	questionRows, err := db.Query(
+func loadSessionQuestions(ctx context.Context, db dbTX, sessionID string) ([]SessionQuestion, error) {
+	type tempSessionQuestion struct {
+		Position            int        `db:"position"`
+		QuestionID          string     `db:"question_id"`
+		QuestionSetID       string     `db:"question_set_id"`
+		Difficulty          int        `db:"difficulty"`
+		QuestionCategories  []byte     `db:"question_categories"`
+		QuestionText        string     `db:"question_text"`
+		Options             []byte     `db:"options_json"`
+		CorrectAnswerIndex  int        `db:"correct_answer_index"`
+		ActivatedAt         *time.Time `db:"activated_at"`
+		AnsweredAt          *time.Time `db:"answered_at"`
+		SelectedAnswerIndex *int       `db:"selected_answer_index"`
+		Correct             *bool      `db:"is_correct"`
+		AwardedPoints       *int       `db:"awarded_points"`
+		ResponseTimeMS      *int       `db:"response_time_ms"`
+		CooldownAppliedMS   *int       `db:"cooldown_applied_ms"`
+	}
+
+	var tempQuestions []tempSessionQuestion
+	err := pgxscan.Select(
 		ctx,
+		db,
+		&tempQuestions,
 		`
 		select
 			position,
@@ -934,70 +932,46 @@ func loadSessionQuestions(ctx context.Context, db *pgxpool.Pool, sessionID strin
 	if err != nil {
 		return nil, fmt.Errorf("query session questions: %w", err)
 	}
-	defer questionRows.Close()
 
-	sessionQuestions := make([]SessionQuestion, 0)
-	for questionRows.Next() {
-		sessionQuestion, err := scanSessionQuestion(questionRows)
-		if err != nil {
-			return nil, err
+	// Convert temp questions to SessionQuestion with proper type conversions
+	sessionQuestions := make([]SessionQuestion, 0, len(tempQuestions))
+	for _, tmp := range tempQuestions {
+		sq := SessionQuestion{
+			Position:            tmp.Position,
+			QuestionID:          tmp.QuestionID,
+			QuestionSetID:       tmp.QuestionSetID,
+			Difficulty:          tmp.Difficulty,
+			QuestionText:        tmp.QuestionText,
+			CorrectAnswerIndex:  tmp.CorrectAnswerIndex,
+			ActivatedAt:         tmp.ActivatedAt,
+			AnsweredAt:          tmp.AnsweredAt,
+			SelectedAnswerIndex: tmp.SelectedAnswerIndex,
+			Correct:             tmp.Correct,
+			AwardedPoints:       tmp.AwardedPoints,
 		}
 
-		sessionQuestions = append(sessionQuestions, sessionQuestion)
-	}
-	if err := questionRows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate session questions: %w", err)
+		// Unmarshal JSON fields
+		if err := json.Unmarshal(tmp.QuestionCategories, &sq.QuestionCategories); err != nil {
+			return nil, fmt.Errorf("unmarshal question categories: %w", err)
+		}
+		if err := json.Unmarshal(tmp.Options, &sq.Options); err != nil {
+			return nil, fmt.Errorf("unmarshal question options: %w", err)
+		}
+
+		// Convert milliseconds to duration
+		if tmp.ResponseTimeMS != nil {
+			duration := time.Duration(*tmp.ResponseTimeMS) * time.Millisecond
+			sq.ResponseTime = &duration
+		}
+		if tmp.CooldownAppliedMS != nil {
+			duration := time.Duration(*tmp.CooldownAppliedMS) * time.Millisecond
+			sq.CooldownApplied = &duration
+		}
+
+		sessionQuestions = append(sessionQuestions, sq)
 	}
 
 	return sessionQuestions, nil
-}
-
-func scanSessionQuestion(rows pgx.Rows) (SessionQuestion, error) {
-	var (
-		sessionQuestion       SessionQuestion
-		questionCategoriesRaw []byte
-		optionsRaw            []byte
-		responseTimeMS        *int
-		cooldownAppliedMS     *int
-	)
-
-	err := rows.Scan(
-		&sessionQuestion.Position,
-		&sessionQuestion.QuestionID,
-		&sessionQuestion.QuestionSetID,
-		&sessionQuestion.Difficulty,
-		&questionCategoriesRaw,
-		&sessionQuestion.QuestionText,
-		&optionsRaw,
-		&sessionQuestion.CorrectAnswerIndex,
-		&sessionQuestion.ActivatedAt,
-		&sessionQuestion.AnsweredAt,
-		&sessionQuestion.SelectedAnswerIndex,
-		&sessionQuestion.Correct,
-		&sessionQuestion.AwardedPoints,
-		&responseTimeMS,
-		&cooldownAppliedMS,
-	)
-	if err != nil {
-		return SessionQuestion{}, fmt.Errorf("scan session question: %w", err)
-	}
-
-	if err := json.Unmarshal(questionCategoriesRaw, &sessionQuestion.QuestionCategories); err != nil {
-		return SessionQuestion{}, fmt.Errorf("unmarshal question categories: %w", err)
-	}
-	if err := json.Unmarshal(optionsRaw, &sessionQuestion.Options); err != nil {
-		return SessionQuestion{}, fmt.Errorf("unmarshal question options: %w", err)
-	}
-	if responseTimeMS != nil {
-		duration := time.Duration(*responseTimeMS) * time.Millisecond
-		sessionQuestion.ResponseTime = &duration
-	}
-	if cooldownAppliedMS != nil {
-		duration := time.Duration(*cooldownAppliedMS) * time.Millisecond
-		sessionQuestion.CooldownApplied = &duration
-	}
-
-	return sessionQuestion, nil
 }
 
 func updateSessionRow(ctx context.Context, tx dbTX, session *Session) error {
@@ -1099,11 +1073,11 @@ func durationMilliseconds(duration *time.Duration) *int {
 	return &value
 }
 
-func newPublicUserID() string {
+func newPublicUserID() (string, error) {
 	randomBytes := make([]byte, 8)
 	if _, err := rand.Read(randomBytes); err != nil {
-		return "user_fallback"
+		return "", fmt.Errorf("read random bytes: %w", err)
 	}
 
-	return "user_" + hex.EncodeToString(randomBytes)
+	return "user_" + hex.EncodeToString(randomBytes), nil
 }

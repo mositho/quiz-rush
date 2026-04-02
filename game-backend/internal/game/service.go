@@ -30,9 +30,9 @@ func (s *Service) StartSession(ctx context.Context, durationSeconds int, selecte
 	}
 
 	return NewSession(SessionConfig{
-		DurationSeconds:       durationSeconds,
+		DurationSeconds:        durationSeconds,
 		SelectedQuestionSetIDs: slices.Clone(selectedQuestionSetIDs),
-		ConfigurationKey:      BuildConfigurationKey(durationSeconds, selectedQuestionSetIDs),
+		ConfigurationKey:       BuildConfigurationKey(durationSeconds, selectedQuestionSetIDs),
 	}, questionDefinitions, now)
 }
 

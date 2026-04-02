@@ -56,42 +56,42 @@ type QuestionDefinition struct {
 }
 
 type SessionQuestion struct {
-	Position            int
-	QuestionID          string
-	QuestionSetID       string
-	Difficulty          int
-	QuestionCategories  []string
-	QuestionText        string
-	Options             []string
-	CorrectAnswerIndex  int
-	ActivatedAt         *time.Time
-	AnsweredAt          *time.Time
-	SelectedAnswerIndex *int
-	Correct             *bool
-	AwardedPoints       *int
-	ResponseTime        *time.Duration
-	CooldownApplied     *time.Duration
+	Position            int            `db:"position"`
+	QuestionID          string         `db:"question_id"`
+	QuestionSetID       string         `db:"question_set_id"`
+	Difficulty          int            `db:"difficulty"`
+	QuestionCategories  []string       `db:"question_categories"`
+	QuestionText        string         `db:"question_text"`
+	Options             []string       `db:"options_json"`
+	CorrectAnswerIndex  int            `db:"correct_answer_index"`
+	ActivatedAt         *time.Time     `db:"activated_at"`
+	AnsweredAt          *time.Time     `db:"answered_at"`
+	SelectedAnswerIndex *int           `db:"selected_answer_index"`
+	Correct             *bool          `db:"is_correct"`
+	AwardedPoints       *int           `db:"awarded_points"`
+	ResponseTime        *time.Duration `db:"-"`
+	CooldownApplied     *time.Duration `db:"-"`
 }
 
 type Session struct {
-	ID                     string
-	Status                 SessionStatus
-	FinishReason           *FinishReason
-	StartedAt              time.Time
-	EndsAt                 time.Time
-	CooldownUntil          *time.Time
-	FinishedAt             *time.Time
-	SaveDeadlineAt         *time.Time
-	DurationSeconds        int
-	SelectedQuestionSetIDs []string
-	ConfigurationKey       string
-	CurrentQuestionIndex   *int
-	TotalQuestions         int
-	AnsweredQuestions      int
-	CorrectQuestions       int
-	WrongQuestions         int
-	CurrentScore           int
-	SessionQuestions       []SessionQuestion
+	ID                     string            `db:"id"`
+	Status                 SessionStatus     `db:"status"`
+	FinishReason           *FinishReason     `db:"finish_reason"`
+	StartedAt              time.Time         `db:"started_at"`
+	EndsAt                 time.Time         `db:"ends_at"`
+	CooldownUntil          *time.Time        `db:"cooldown_until"`
+	FinishedAt             *time.Time        `db:"finished_at"`
+	SaveDeadlineAt         *time.Time        `db:"save_deadline_at"`
+	DurationSeconds        int               `db:"duration_seconds"`
+	SelectedQuestionSetIDs []string          `db:"selected_question_set_ids"`
+	ConfigurationKey       string            `db:"configuration_key"`
+	CurrentQuestionIndex   *int              `db:"current_question_index"`
+	TotalQuestions         int               `db:"total_questions"`
+	AnsweredQuestions      int               `db:"answered_questions"`
+	CorrectQuestions       int               `db:"correct_questions"`
+	WrongQuestions         int               `db:"wrong_questions"`
+	CurrentScore           int               `db:"current_score"`
+	SessionQuestions       []SessionQuestion `db:"-"`
 }
 
 type Question struct {

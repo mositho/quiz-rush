@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -191,34 +192,38 @@ func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	session, ownerProfileID, isAnonymous, err := h.repository.LoadSession(r.Context(), chi.URLParam(r, "sessionId"))
+	authenticatedProfileID, err := h.authenticatedProfileID(r)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to ensure authenticated profile"})
+		return
+	}
+
+	session, _, _, err := h.repository.UpdateLockedSession(
+		r.Context(),
+		chi.URLParam(r, "sessionId"),
+		func(session *Session, ownerProfileID *string, isAnonymous bool) error {
+			accessErr := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous)
+			if accessErr != nil {
+				return accessErr
+			}
+
+			session.Sync(now)
+			h.applyAnonymousSaveDeadline(session, now)
+			return nil
+		},
+	)
 	if errors.Is(err, ErrSessionNotFound) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "session not found"})
 		return
 	}
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
-		return
-	}
-	authenticatedProfileID, err := h.authenticatedProfileID(r)
-	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
-		return
-	}
-	accessErr := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous)
-	if accessErr != nil {
-		statusCode := http.StatusForbidden
-		if errors.Is(accessErr, errAuthenticationRequired) {
+		statusCode := http.StatusInternalServerError
+		if errors.Is(err, errAuthenticationRequired) {
 			statusCode = http.StatusUnauthorized
+		} else if errors.Is(err, errSessionForbidden) {
+			statusCode = http.StatusForbidden
 		}
-		writeJSON(w, statusCode, map[string]string{"error": accessErr.Error()})
-		return
-	}
-
-	session.Sync(now)
-	h.applyAnonymousSaveDeadline(session, now)
-	if err := h.repository.UpdateSession(r.Context(), session); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
+		writeJSON(w, statusCode, map[string]string{"error": err.Error()})
 		return
 	}
 
@@ -238,39 +243,46 @@ func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	session, ownerProfileID, isAnonymous, err := h.repository.LoadSession(r.Context(), chi.URLParam(r, "sessionId"))
+	authenticatedProfileID, err := h.authenticatedProfileID(r)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to ensure authenticated profile"})
+		return
+	}
+	var result AnswerResult
+	session, ownerProfileID, isAnonymous, err := h.repository.UpdateLockedSession(
+		r.Context(),
+		chi.URLParam(r, "sessionId"),
+		func(session *Session, ownerProfileID *string, isAnonymous bool) error {
+			accessErr := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous)
+			if accessErr != nil {
+				return accessErr
+			}
+
+			answerResult, submitErr := session.SubmitAnswer(now, request.SelectedAnswerIndex)
+			if submitErr != nil {
+				return submitErr
+			}
+
+			result = answerResult
+			h.applyAnonymousSaveDeadline(session, now)
+			return nil
+		},
+	)
 	if errors.Is(err, ErrSessionNotFound) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "session not found"})
 		return
 	}
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
-		return
-	}
-	authenticatedProfileID, err := h.authenticatedProfileID(r)
-	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
-		return
-	}
-	accessErr := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous)
-	if accessErr != nil {
-		statusCode := http.StatusForbidden
-		if errors.Is(accessErr, errAuthenticationRequired) {
+		statusCode := http.StatusInternalServerError
+		switch {
+		case errors.Is(err, errAuthenticationRequired):
 			statusCode = http.StatusUnauthorized
+		case errors.Is(err, errSessionForbidden):
+			statusCode = http.StatusForbidden
+		case errors.Is(err, ErrSessionAlreadyFinished), errors.Is(err, ErrCooldownActive), errors.Is(err, ErrNoCurrentQuestion), errors.Is(err, ErrInvalidAnswerIndex):
+			statusCode = http.StatusBadRequest
 		}
-		writeJSON(w, statusCode, map[string]string{"error": accessErr.Error()})
-		return
-	}
-
-	result, err := session.SubmitAnswer(now, request.SelectedAnswerIndex)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-		return
-	}
-
-	h.applyAnonymousSaveDeadline(session, now)
-	if err := h.repository.UpdateSession(r.Context(), session); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
+		writeJSON(w, statusCode, map[string]string{"error": err.Error()})
 		return
 	}
 
@@ -505,33 +517,38 @@ func (h *Handler) finishWithReason(w http.ResponseWriter, r *http.Request, reaso
 	}
 
 	now := time.Now().UTC()
-	session, ownerProfileID, isAnonymous, err := h.repository.LoadSession(r.Context(), chi.URLParam(r, "sessionId"))
+	authenticatedProfileID, err := h.authenticatedProfileID(r)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to ensure authenticated profile"})
+		return
+	}
+
+	session, ownerProfileID, isAnonymous, err := h.repository.UpdateLockedSession(
+		r.Context(),
+		chi.URLParam(r, "sessionId"),
+		func(session *Session, ownerProfileID *string, isAnonymous bool) error {
+			accessErr := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous)
+			if accessErr != nil {
+				return accessErr
+			}
+
+			session.Finish(now, reason)
+			h.applyAnonymousSaveDeadline(session, now)
+			return nil
+		},
+	)
 	if errors.Is(err, ErrSessionNotFound) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "session not found"})
 		return
 	}
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load session"})
-		return
-	}
-	authenticatedProfileID, err := h.authenticatedProfileID(r)
-	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
-		return
-	}
-	if err := authorizeSessionAccess(authenticatedProfileID, ownerProfileID, isAnonymous); err != nil {
-		statusCode := http.StatusForbidden
+		statusCode := http.StatusInternalServerError
 		if errors.Is(err, errAuthenticationRequired) {
 			statusCode = http.StatusUnauthorized
+		} else if errors.Is(err, errSessionForbidden) {
+			statusCode = http.StatusForbidden
 		}
 		writeJSON(w, statusCode, map[string]string{"error": err.Error()})
-		return
-	}
-
-	session.Finish(now, reason)
-	h.applyAnonymousSaveDeadline(session, now)
-	if err := h.repository.UpdateSession(r.Context(), session); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to update session"})
 		return
 	}
 	if err := h.persistScore(r, session, ownerProfileID, isAnonymous); err != nil {
@@ -580,7 +597,7 @@ func (h *Handler) authenticatedProfileID(r *http.Request) (*string, error) {
 
 	profileID, err := h.repository.EnsureUserProfile(r.Context(), user)
 	if err != nil {
-		return nil, errAuthenticationRequired
+		return nil, fmt.Errorf("ensure authenticated profile: %w", err)
 	}
 
 	return &profileID, nil
