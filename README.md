@@ -301,6 +301,32 @@ Start everything with:
 docker compose up --build
 ```
 
+### Development compose override (Vue HMR)
+
+For Docker-based frontend development with Vue hot module replacement, use the new dev override file.
+
+Start the stack with:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+Then open the frontend at `http://localhost:5173`.
+
+Exposed development endpoints:
+
+- Game backend: `http://localhost:8080`
+- Keycloak: `http://localhost:8082/account`
+
+Notes:
+
+- Frontend source is bind-mounted from `./frontend` into the container.
+- `node_modules` is kept in a Docker volume to avoid host/container binary conflicts.
+- Frontend uses direct service URLs via `VITE_API_BASE_URL` and `VITE_KEYCLOAK_URL` (configured in `docker-compose.dev.yml`).
+- Keycloak realm dev config allows `http://localhost:5173` as redirect origin for the `quiz-rush-app` client.
+- Dev override uses a dedicated Keycloak Postgres volume to avoid stale realm config from other compose profiles.
+- If an older dev Keycloak volume exists, recreate it once: `docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v keycloak keycloak-postgres`.
+
 ### Production compose override
 
 The production setup uses a second compose file that overrides local development defaults.
