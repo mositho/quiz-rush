@@ -558,10 +558,10 @@ func (r *sessionRepository) GetUserStatsByPublicUserID(ctx context.Context, publ
 	}
 
 	var statsRow struct {
-		GamesPlayed           int     `db:"count"`
-		BestScore             int     `db:"max"`
-		AverageScore          float64 `db:"avg"`
-		TotalCorrectQuestions int     `db:"sum"`
+		GamesPlayed           int     `db:"games_played"`
+		BestScore             int     `db:"best_score"`
+		AverageScore          float64 `db:"average_score"`
+		TotalCorrectQuestions int     `db:"total_correct_questions"`
 	}
 
 	err = pgxscan.Get(
@@ -570,10 +570,10 @@ func (r *sessionRepository) GetUserStatsByPublicUserID(ctx context.Context, publ
 		&statsRow,
 		`
 		select
-			count(*),
-			coalesce(max(score), 0),
-			coalesce(avg(score), 0),
-			coalesce(sum(correct_questions), 0)
+			count(*)::int as games_played,
+			coalesce(max(score), 0)::int as best_score,
+			coalesce(avg(score), 0)::float8 as average_score,
+			coalesce(sum(correct_questions), 0)::int as total_correct_questions
 		from game_scores
 		where owner_profile_id = $1 and is_public = true and is_saved = true
 		`,
@@ -600,9 +600,9 @@ func (r *sessionRepository) ListLeaderboard(ctx context.Context, configurationKe
 			s.score,
 			s.finished_at,
 			s.configuration_key,
-			u.id,
-			u.public_user_id,
-			u.display_name
+			u.id as player_id,
+			u.public_user_id as player_public_user_id,
+			u.display_name as player_display_name
 		from game_scores s
 		join user_profiles u on u.id = s.owner_profile_id
 		where s.is_public = true and s.is_saved = true
@@ -620,15 +620,34 @@ func (r *sessionRepository) ListLeaderboard(ctx context.Context, configurationKe
 		args = append(args, limit)
 	}
 
-	var entries []leaderboardEntry
-	err := pgxscan.Select(ctx, r.db, &entries, query, args...)
+	var rows []struct {
+		ScoreID           string    `db:"id"`
+		Score             int       `db:"score"`
+		FinishedAt        time.Time `db:"finished_at"`
+		ConfigurationKey  string    `db:"configuration_key"`
+		PlayerID          string    `db:"player_id"`
+		PlayerPublicUserID string   `db:"player_public_user_id"`
+		PlayerDisplayName string    `db:"player_display_name"`
+	}
+	err := pgxscan.Select(ctx, r.db, &rows, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list leaderboard: %w", err)
 	}
 
-	// Add rank to each entry
-	for i := range entries {
-		entries[i].Rank = i + 1
+	entries := make([]leaderboardEntry, 0, len(rows))
+	for i, row := range rows {
+		entries = append(entries, leaderboardEntry{
+			Rank:             i + 1,
+			ScoreID:          row.ScoreID,
+			Score:            row.Score,
+			FinishedAt:       row.FinishedAt,
+			ConfigurationKey: row.ConfigurationKey,
+			Player: userProfile{
+				ID:           row.PlayerID,
+				PublicUserID: row.PlayerPublicUserID,
+				DisplayName:  row.PlayerDisplayName,
+			},
+		})
 	}
 
 	return entries, nil
