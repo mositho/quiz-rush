@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -63,9 +64,19 @@ func main() {
 }
 
 func loadBackendEnv() {
-	if err := godotenv.Load("game-backend/.env"); err != nil {
-		log.Printf("WARNING: Missing game-backend/.env: %v", err)
+	candidates := []string{
+		"game-backend/.env",
+		".env",
+		filepath.Join("..", "..", ".env"),
 	}
+
+	for _, candidate := range candidates {
+		if err := godotenv.Load(candidate); err == nil {
+			return
+		}
+	}
+
+	log.Printf("WARNING: Missing backend env file. Tried: %v", candidates)
 }
 
 func initAuthMiddlewareWithRetry(ctx context.Context) (func(http.Handler) http.Handler, error) {
