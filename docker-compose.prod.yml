@@ -1,12 +1,12 @@
 services:
     game-postgres:
         ports: !reset []
-        restart: unless-stopped
+        restart: on-failure:5
         environment:
             POSTGRES_PASSWORD: ${GAME_POSTGRES_PASSWORD:?GAME_POSTGRES_PASSWORD is required}
 
     keycloak-postgres:
-        restart: unless-stopped
+        restart: on-failure:5
         environment:
             POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
 
@@ -19,13 +19,13 @@ services:
         command: ["/app/questions-server"]
         volumes: !reset []
         ports: !reset []
-        restart: unless-stopped
+        restart: on-failure:5
         environment:
             CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:?CORS_ALLOWED_ORIGIN is required}
 
     keycloak:
         command: ["start", "--import-realm"]
-        restart: unless-stopped
+        restart: on-failure:5
         environment:
             KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
             KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
@@ -41,15 +41,17 @@ services:
         command: ["/app/game-server"]
         volumes: !reset []
         ports: !reset []
-        restart: unless-stopped
+        restart: on-failure:5
         environment:
             CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:?CORS_ALLOWED_ORIGIN is required}
             KEYCLOAK_ISSUER_URL: ${KEYCLOAK_ISSUER_URL:?KEYCLOAK_ISSUER_URL is required}
             KEYCLOAK_INTERNAL_ISSUER_URL: ${KEYCLOAK_INTERNAL_ISSUER_URL:-http://keycloak:8080/account/realms/quiz-rush}
+            AUTH_INIT_MAX_WAIT: ${AUTH_INIT_MAX_WAIT:-180s}
+            AUTH_INIT_RETRY_INTERVAL: ${AUTH_INIT_RETRY_INTERVAL:-5s}
 
     frontend:
         ports: !reset []
-        restart: unless-stopped
+        restart: on-failure:5
         build:
             args:
                 VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}

@@ -344,6 +344,8 @@ Production-specific behavior in the override:
 - Required secrets and URLs fail fast when missing
 - Keycloak imports the file selected by `KEYCLOAK_IMPORT_FILE`
 - `game-backend` and `questions-backend` are built as container images (no source-code bind mount required)
+- Restart policy is bounded (`on-failure:5`) to prevent endless crash loops during debugging
+- `game-backend` retries OIDC startup to wait for Keycloak readiness
 
 Minimum required variables in `.env.prod`:
 
@@ -355,6 +357,8 @@ Minimum required variables in `.env.prod`:
 - `KEYCLOAK_ISSUER_URL`
 - `CORS_ALLOWED_ORIGIN`
 - `VITE_KEYCLOAK_URL`
+- `AUTH_INIT_MAX_WAIT=180s`
+- `AUTH_INIT_RETRY_INTERVAL=5s`
 
 Update `keycloak/realm-export.prod.json` with your real frontend domain before deployment.
 
