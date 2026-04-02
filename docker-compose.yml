@@ -59,7 +59,7 @@ services:
             KC_HOSTNAME_STRICT: "false"
             KC_PROXY_HEADERS: xforwarded
         volumes:
-            - ./keycloak:/opt/keycloak/data/import:ro
+            - ${KEYCLOAK_IMPORT_FILE:-./keycloak/realm-export.json}:/opt/keycloak/data/import/realm-export.json:ro
         depends_on:
             keycloak-postgres:
                 condition: service_healthy

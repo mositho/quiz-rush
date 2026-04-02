@@ -11,6 +11,13 @@ services:
             POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
 
     questions-backend:
+        image: quiz-rush-questions-backend:prod
+        build:
+            context: ./questions-backend
+            dockerfile: Dockerfile
+        working_dir: /app
+        command: ["/app/questions-server"]
+        volumes: !reset []
         ports: !reset []
         restart: unless-stopped
         environment:
@@ -24,10 +31,15 @@ services:
             KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
             KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:?KEYCLOAK_HOSTNAME is required}
             KC_HOSTNAME_STRICT: "true"
-        volumes: !override
-            - ./keycloak/realm-export.prod.json:/opt/keycloak/data/import/realm-export.json:ro
 
     game-backend:
+        image: quiz-rush-game-backend:prod
+        build:
+            context: ./game-backend
+            dockerfile: Dockerfile
+        working_dir: /app
+        command: ["/app/game-server"]
+        volumes: !reset []
         ports: !reset []
         restart: unless-stopped
         environment:
