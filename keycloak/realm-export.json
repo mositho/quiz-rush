@@ -16,7 +16,7 @@
             "enabled": true,
             "publicClient": true,
             "standardFlowEnabled": true,
-            "directAccessGrantsEnabled": false,
+            "directAccessGrantsEnabled": true,
             "implicitFlowEnabled": false,
             "serviceAccountsEnabled": false,
             "protocol": "openid-connect",
@@ -26,6 +26,24 @@
                 "pkce.code.challenge.method": "S256",
                 "post.logout.redirect.uris": "+"
             }
+        }
+    ],
+    "users": [
+        {
+            "username": "testuser",
+            "enabled": true,
+            "email": "testuser@test.com",
+            "emailVerified": true,
+            "firstName": "Test",
+            "lastName": "User",
+            "requiredActions": [],
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "test-password",
+                    "temporary": false
+                }
+            ]
         }
     ]
 }
