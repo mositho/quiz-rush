@@ -18,9 +18,10 @@ import (
 )
 
 type Handler struct {
-	db         *pgxpool.Pool
-	service    *Service
-	repository *sessionRepository
+	db              *pgxpool.Pool
+	service         *Service
+	questionsClient *questionsapi.Client
+	repository      *sessionRepository
 }
 
 type startSessionRequest struct {
@@ -137,10 +138,30 @@ type linkAccountResponse struct {
 
 func NewHandler(db *pgxpool.Pool, questionsClient *questionsapi.Client) *Handler {
 	return &Handler{
-		db:         db,
-		service:    NewService(questionsClient),
-		repository: newSessionRepository(db),
+		db:              db,
+		service:         NewService(questionsClient),
+		questionsClient: questionsClient,
+		repository:      newSessionRepository(db),
 	}
+}
+
+func (h *Handler) GetQuestionSets(w http.ResponseWriter, r *http.Request) {
+	if h.repository.db == nil {
+		writeServiceUnavailable(w)
+		return
+	}
+	if h.questionsClient == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "questions client is not configured"})
+		return
+	}
+
+	sets, err := h.questionsClient.ListSets(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "failed to load question sets"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, sets)
 }
 
 func (h *Handler) StartSession(w http.ResponseWriter, r *http.Request) {

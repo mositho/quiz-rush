@@ -8,6 +8,13 @@ import (
 	"strings"
 )
 
+type QuestionSet struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Length      int    `json:"length"`
+}
+
 type Question struct {
 	ID            string   `json:"id"`
 	Difficulty    int      `json:"difficulty"`
@@ -42,6 +49,38 @@ func NewWithHTTPClient(baseURL string, httpClient *http.Client) *Client {
 
 func (c *Client) BaseURL() string {
 	return c.baseURL
+}
+
+func (c *Client) ListSets(ctx context.Context) (sets []QuestionSet, err error) {
+	request, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		fmt.Sprintf("%s/api/sets", c.baseURL),
+		nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("build list sets request: %w", err)
+	}
+
+	response, err := c.httpClient.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("load question sets: %w", err)
+	}
+	defer func() {
+		if closeErr := response.Body.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("close list sets response: %w", closeErr)
+		}
+	}()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("load question sets: unexpected status %d", response.StatusCode)
+	}
+
+	if err := json.NewDecoder(response.Body).Decode(&sets); err != nil {
+		return nil, fmt.Errorf("decode question sets: %w", err)
+	}
+
+	return sets, nil
 }
 
 func (c *Client) LoadQuestionsBySetID(ctx context.Context, setID string) (questions []Question, err error) {
