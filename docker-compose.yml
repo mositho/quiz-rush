@@ -17,7 +17,7 @@ services:
         ports:
             - "${GAME_POSTGRES_HOST_PORT:-5433}:5432"
         volumes:
-            - game_postgres_data:/var/lib/postgresql/data
+            - game_postgres_data:/var/lib/postgresql
 
     keycloak-postgres:
         <<: *postgres-common
@@ -27,7 +27,7 @@ services:
             POSTGRES_USER: keycloak
             POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-changeme}
         volumes:
-            - keycloak_postgres_data:/var/lib/postgresql/data
+            - keycloak_postgres_data:/var/lib/postgresql
 
     questions-backend:
         image: golang:1.25.8
