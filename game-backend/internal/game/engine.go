@@ -104,7 +104,6 @@ type AnswerResult struct {
 	Correct        bool          `json:"correct"`
 	AwardedPoints  int           `json:"awardedPoints"`
 	ResponseTimeMs int64         `json:"responseTimeMs"`
-	NextQuestion   *Question     `json:"nextQuestion,omitempty"`
 	Finished       bool          `json:"finished"`
 	FinishReason   *FinishReason `json:"finishReason,omitempty"`
 }
@@ -273,11 +272,6 @@ func (s *Session) SubmitAnswer(now time.Time, selectedAnswerIndex int) (AnswerRe
 		Correct:        isCorrect,
 		AwardedPoints:  points,
 		ResponseTimeMs: responseTime.Milliseconds(),
-	}
-
-	nextQuestion, err := s.CurrentQuestion(answeredAt)
-	if err == nil {
-		result.NextQuestion = nextQuestion
 	}
 
 	return result, nil

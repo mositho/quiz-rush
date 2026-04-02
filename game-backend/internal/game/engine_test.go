@@ -46,9 +46,11 @@ func TestSubmitCorrectAnswerAdvancesAndScores(t *testing.T) {
 	}
 	assertEqual(t, session.CurrentScore, result.AwardedPoints)
 	assertEqual(t, session.CorrectQuestions, 1)
-	if result.NextQuestion == nil || result.NextQuestion.QuestionID != "q2" {
-		t.Fatalf("got next question %+v, want questionId q2", result.NextQuestion)
+	currentQuestion, err := session.CurrentQuestion(now.Add(2 * time.Second))
+	if err != nil {
+		t.Fatal(err)
 	}
+	assertEqual(t, currentQuestion.QuestionID, "q2")
 }
 
 func TestWrongAnswerDeductsTimeAndAdvancesImmediately(t *testing.T) {

@@ -30,7 +30,6 @@ export interface SubmitAnswerResult {
   awardedPoints: number;
   responseTimeMs: number;
   cooldownUntil: string | null;
-  nextQuestion: Question | null;
   finished: boolean;
   finishReason: string | null;
 }
