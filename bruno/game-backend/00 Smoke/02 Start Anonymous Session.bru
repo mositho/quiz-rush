@@ -1,0 +1,41 @@
+meta {
+  name: 02 Start Anonymous Session
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/game/sessions
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "durationSeconds": {{durationSeconds}},
+    "selectedQuestionSetIds": ["{{questionSetId}}"]
+  }
+}
+
+tests {
+  test("returns 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("returns an active session", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal("active");
+    expect(body.sessionId).to.be.a("string");
+    expect(body.currentQuestion).to.not.equal(null);
+    expect(body.totalQuestions).to.be.greaterThan(0);
+  });
+
+  test("stores session id", function() {
+    const body = res.getBody();
+    bru.setEnvVar("sessionId", body.sessionId);
+  });
+}

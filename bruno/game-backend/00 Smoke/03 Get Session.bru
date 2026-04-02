@@ -1,0 +1,24 @@
+meta {
+  name: 03 Get Session
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/game/sessions/{{sessionId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns the same session", function() {
+    const body = res.getBody();
+    expect(body.sessionId).to.equal(bru.getEnvVar("sessionId"));
+    expect(body.status).to.equal("active");
+    expect(body.currentQuestion).to.not.equal(null);
+  });
+}

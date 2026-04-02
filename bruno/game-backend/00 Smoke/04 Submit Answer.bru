@@ -1,0 +1,37 @@
+meta {
+  name: 04 Submit Answer
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/game/sessions/{{sessionId}}/answers
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "selectedAnswerIndex": 0
+  }
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns session and answer result", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("session");
+    expect(body).to.have.property("result");
+    expect(body.session.sessionId).to.equal(bru.getEnvVar("sessionId"));
+    expect(body.session.answeredQuestions).to.equal(1);
+    expect(body.result).to.have.property("correct");
+    expect(body.result).to.have.property("finished");
+  });
+}

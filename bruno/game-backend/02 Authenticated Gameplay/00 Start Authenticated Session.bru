@@ -1,0 +1,35 @@
+meta {
+  name: 00 Start Authenticated Session
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/game/sessions
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "durationSeconds": {{durationSeconds}},
+    "selectedQuestionSetIds": ["{{questionSetId}}"]
+  }
+}
+
+tests {
+  test("returns 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("stores authenticated session id", function() {
+    const body = res.getBody();
+    expect(body.sessionId).to.be.a("string");
+    bru.setEnvVar("authenticatedSessionId", body.sessionId);
+  });
+}

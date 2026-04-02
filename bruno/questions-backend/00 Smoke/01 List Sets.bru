@@ -1,0 +1,31 @@
+meta {
+  name: 01 List Sets
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/sets
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns at least one set", function() {
+    const body = res.getBody();
+    expect(Array.isArray(body)).to.equal(true);
+    expect(body.length).to.be.greaterThan(0);
+    expect(body[0]).to.have.property("id");
+    expect(body[0]).to.have.property("name");
+    expect(body[0]).to.have.property("length");
+  });
+
+  test("stores first set id", function() {
+    const body = res.getBody();
+    bru.setEnvVar("questionSetId", body[0].id);
+  });
+}

@@ -1,0 +1,27 @@
+meta {
+  name: 01 Get Current User
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/game/users/me
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("stores public user id", function() {
+    const body = res.getBody();
+    expect(body.publicUserId).to.be.a("string");
+    bru.setEnvVar("publicUserId", body.publicUserId);
+  });
+}

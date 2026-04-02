@@ -1,0 +1,23 @@
+meta {
+  name: 01 Get Score
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/game/scores/{{latestScoreId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns stored score", function() {
+    const body = res.getBody();
+    expect(body.scoreId).to.equal(bru.getEnvVar("latestScoreId"));
+    expect(body.player.publicUserId).to.equal(bru.getEnvVar("publicUserId"));
+  });
+}

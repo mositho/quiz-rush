@@ -1,0 +1,26 @@
+meta {
+  name: 00 Get User Scores
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/game/users/{{publicUserId}}/scores
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("stores latest score id and configuration key", function() {
+    const body = res.getBody();
+    expect(Array.isArray(body.scores)).to.equal(true);
+    expect(body.scores.length).to.be.greaterThan(0);
+    expect(body.scores[0].scoreId).to.be.a("string");
+    bru.setEnvVar("latestScoreId", body.scores[0].scoreId);
+    bru.setEnvVar("configurationKey", body.scores[0].configurationKey);
+  });
+}

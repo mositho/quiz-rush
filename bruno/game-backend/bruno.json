@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Quiz Rush Game",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

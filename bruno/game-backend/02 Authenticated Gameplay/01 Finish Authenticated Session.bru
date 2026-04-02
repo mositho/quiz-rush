@@ -1,0 +1,27 @@
+meta {
+  name: 01 Finish Authenticated Session
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/game/sessions/{{authenticatedSessionId}}/finish
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns finished session", function() {
+    const body = res.getBody();
+    expect(body.sessionId).to.equal(bru.getEnvVar("authenticatedSessionId"));
+    expect(body.status).to.equal("finished");
+  });
+}

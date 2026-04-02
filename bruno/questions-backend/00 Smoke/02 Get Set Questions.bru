@@ -1,0 +1,27 @@
+meta {
+  name: 02 Get Set Questions
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/sets/{{questionSetId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("returns at least one question", function() {
+    const body = res.getBody();
+    expect(Array.isArray(body)).to.equal(true);
+    expect(body.length).to.be.greaterThan(0);
+    expect(body[0]).to.have.property("id");
+    expect(body[0]).to.have.property("question");
+    expect(body[0]).to.have.property("options");
+    expect(body[0]).to.have.property("correctAnswer");
+  });
+}
