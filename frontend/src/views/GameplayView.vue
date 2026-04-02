@@ -2,7 +2,7 @@
   <div class="gameplay-view">
     <div v-if="loading" class="gameplay-view__loading">Loading session...</div>
     <div v-else-if="error" class="gameplay-view__error">{{ error }}</div>
-    
+
     <div v-else-if="session" class="game-container">
       <header class="gameplay-view__header">
         <div class="gameplay-view__score">Score: {{ session.currentScore }}</div>
@@ -10,11 +10,12 @@
           {{ session.answeredQuestions }} / {{ session.totalQuestions }}
         </div>
       </header>
+      <TimerBar :ends-at="session.endsAt" :duration-seconds="session.durationSeconds" />
       <QuestionCard
         v-if="session.currentQuestion"
         :question="session.currentQuestion"
-        @select="sendAnswer"
-      />    
+        @answer-selected="sendAnswer"
+      />
       <div v-else class="gameplay-view__finished">
         <h2>Game Finished!</h2>
         <p>Final Score: {{ session.currentScore }}</p>
@@ -29,6 +30,8 @@
 import { onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useGameSession } from "@/composables/useGameSession";
+import QuestionCard from "@/components/QuestionCard.vue";
+import TimerBar from "@/components/TimerBar.vue";
 
 const router = useRouter();
 const route = useRoute();

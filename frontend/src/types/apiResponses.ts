@@ -34,3 +34,10 @@ export interface SubmitAnswerResult {
   finished: boolean;
   finishReason: string | null;
 }
+
+export interface QuestionSet {
+  id: string;
+  name: string;
+  description: string;
+  length: number;
+}

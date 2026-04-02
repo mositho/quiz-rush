@@ -1,6 +1,6 @@
-import { getAccessToken, refreshKeycloakToken } from "./keycloak";
 import type { StartSessionRequest } from "@/types/apiRequests";
-import type { Session, SubmitAnswerResult } from "@/types/apiResponses";
+import type { Session, SubmitAnswerResult, QuestionSet } from "@/types/apiResponses";
+import { getAccessToken, refreshKeycloakToken } from "./keycloak";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -66,6 +66,11 @@ export async function startSession(request: StartSessionRequest): Promise<Sessio
 export async function getSession(sessionId: string): Promise<Session> {
   return apiFetch<Session>(`/game/sessions/${sessionId}`);
 }
+
+export async function getQuestionSets(): Promise<QuestionSet[]> {
+  return apiFetch<QuestionSet[]>("/game/question-sets");
+}
+
 export async function submitAnswer(
   sessionId: string,
   answerIndex: number
@@ -77,7 +82,7 @@ export async function submitAnswer(
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ answerIndex }),
+      body: JSON.stringify({ selectedAnswerIndex: answerIndex }),
     }
   );
 }

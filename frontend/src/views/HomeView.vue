@@ -1,81 +1,102 @@
 <template>
-  <main class="home-view">
-    <section class="home-view__panel">
-      <h1>Quiz Rush</h1>
-
-      <p class="home-view__status">
-        <span v-if="authState.initialized && authState.authenticated">
-          Signed in as {{ authState.username }}.
-        </span>
-        <span v-else-if="authState.initialized">Not signed in.</span>
-        <span v-else>Checking session...</span>
-      </p>
-
-      <div class="home-view__actions">
-        <button v-if="!authState.authenticated" type="button" @click="handleLogin">
-          Sign in with Keycloak
-        </button>
-        <button v-else type="button" @click="handleLogout">Sign out</button>
+  <main class="home">
+    <header class="home__header">
+      <h1 class="home__title">Quiz Rush</h1>
+      <div class="home__auth">
+        <template v-if="!authState.initialized">
+          <span class="home__auth-hint">Checking session…</span>
+        </template>
+        <template v-else-if="authState.authenticated">
+          <span class="home__auth-name">{{ authState.username }}</span>
+          <button class="btn btn--ghost" type="button" @click="handleLogout">Sign out</button>
+        </template>
+        <template v-else>
+          <button class="btn btn--ghost" type="button" @click="handleLogin">Sign in</button>
+        </template>
       </div>
-    </section>
+    </header>
 
-    <section class="home-view__panel home-view__panel--wide">
-      <h2>Backend Auth Check</h2>
-      <p class="home-view__hint">
-        Public request should return 200. Protected request should return 201 when signed in and 401
-        when not signed in.
-      </p>
+    <div class="home__body">
+      <!-- Config panel -->
+      <section class="card">
+        <h2 class="card__title">New Game</h2>
 
-      <div class="home-view__actions home-view__actions--stacked">
-        <button type="button" :disabled="loading" @click="loadLeaderboard">
-          Test public GET /api/leaderboard/demo
+        <label class="field">
+          <span class="field__label">Duration</span>
+          <select v-model="durationSeconds" class="field__input">
+            <option :value="60">1 minute</option>
+            <option :value="120">2 minutes</option>
+            <option :value="180">3 minutes</option>
+            <option :value="300">5 minutes</option>
+          </select>
+        </label>
+
+        <fieldset class="field" :disabled="setsLoading">
+          <legend class="field__label">Question sets</legend>
+          <p v-if="setsLoading" class="hint">Loading sets…</p>
+          <p v-else-if="setsError" class="hint hint--error">{{ setsError }}</p>
+          <label v-for="set in questionSets" :key="set.id" class="checkbox">
+            <input type="checkbox" :value="set.id" v-model="selectedSetIds" />
+            <span class="checkbox__label"
+              >{{ set.name }} <em class="hint">({{ set.length }} questions)</em></span
+            >
+          </label>
+        </fieldset>
+
+        <p v-if="startError" class="hint hint--error">{{ startError }}</p>
+
+        <button
+          class="btn btn--primary btn--full"
+          type="button"
+          :disabled="selectedSetIds.length === 0 || starting"
+          @click="handleStart"
+        >
+          {{ starting ? "Starting…" : "Play" }}
         </button>
-        <button type="button" :disabled="loading" @click="createResult">
-          Test protected POST /api/results
-        </button>
-      </div>
+      </section>
 
-      <p v-if="loading" class="home-view__hint">Sending request...</p>
-
-      <div v-if="lastResult" class="home-view__result">
-        <p>
-          <strong>{{ lastResult.label }}</strong>
-        </p>
-        <p>Status: {{ lastResult.status }}</p>
-        <pre>{{ lastResult.body }}</pre>
-      </div>
-    </section>
-    <section>
-      <button @click="startGame">Start Game</button>
-    </section>
+      <!-- Profile panel (only when signed in) -->
+      <section v-if="authState.authenticated" class="card">
+        <h2 class="card__title">Profile</h2>
+        <p class="home__auth-name">{{ authState.username }}</p>
+        <!-- Placeholder for scores/stats — wire up when history page exists -->
+        <p class="hint">Score history coming soon.</p>
+      </section>
+    </div>
   </main>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import { ApiError, apiFetch } from "../services/api";
-import { authState, loginWithKeycloak, logoutFromKeycloak } from "../services/keycloak";
 import { useGameSession } from "@/composables/useGameSession";
-import { router } from "@/router";
+import { getQuestionSets } from "@/services/api";
+import { authState, loginWithKeycloak, logoutFromKeycloak } from "@/services/keycloak";
+import type { QuestionSet } from "@/types/apiResponses";
+import { onMounted, ref } from "vue";
 
-interface LeaderboardResponse {
-  packageSlug: string;
-  entries: Array<{ player: string; score: number }>;
-}
+const { startNewSession } = useGameSession();
 
-interface CreateResultResponse {
-  status: string;
-}
+const durationSeconds = ref(180);
+const selectedSetIds = ref<string[]>([]);
+const questionSets = ref<QuestionSet[]>([]);
+const setsLoading = ref(false);
+const setsError = ref<string | null>(null);
+const starting = ref(false);
+const startError = ref<string | null>(null);
 
-interface RequestResult {
-  label: string;
-  status: number | string;
-  body: string;
-}
+onMounted(async () => {
+  setsLoading.value = true;
+  setsError.value = null;
+  try {
+    questionSets.value = await getQuestionSets();
+    // pre-select all sets
+    selectedSetIds.value = questionSets.value.map((s) => s.id);
+  } catch {
+    setsError.value = "Could not load question sets.";
+  } finally {
+    setsLoading.value = false;
+  }
+});
 
-const {startNewSession } = useGameSession();
-const lastResult = ref<RequestResult | null>(null);
-const loading = ref(false);
 function handleLogin() {
   void loginWithKeycloak();
 }
@@ -84,148 +105,155 @@ function handleLogout() {
   void logoutFromKeycloak();
 }
 
-async function loadLeaderboard() {
-  loading.value = true;
-
+async function handleStart() {
+  if (selectedSetIds.value.length === 0) return;
+  starting.value = true;
+  startError.value = null;
   try {
-    const response = await apiFetch<LeaderboardResponse>("/leaderboard/demo");
-
-    lastResult.value = {
-      label: "Public leaderboard request",
-      status: 200,
-      body: JSON.stringify(response, null, 2),
-    };
-  } catch (error) {
-    lastResult.value = mapError("Public leaderboard request", error);
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function createResult() {
-  loading.value = true;
-
-  try {
-    const response = await apiFetch<CreateResultResponse>("/results", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
+    await startNewSession({
+      durationSeconds: durationSeconds.value,
+      selectedQuestionSetIds: selectedSetIds.value,
     });
-
-    lastResult.value = {
-      label: "Protected result submission",
-      status: 201,
-      body: JSON.stringify(response, null, 2),
-    };
-  } catch (error) {
-    lastResult.value = mapError("Protected result submission", error);
+  } catch {
+    startError.value = "Failed to start session. Please try again.";
   } finally {
-    loading.value = false;
+    starting.value = false;
   }
-}
-
-function mapError(label: string, error: unknown): RequestResult {
-  if (error instanceof ApiError) {
-    return {
-      label,
-      status: error.status,
-      body: error.body || error.message,
-    };
-  }
-
-  return {
-    label,
-    status: "error",
-    body: error instanceof Error ? error.message : "Unknown error",
-  };
-}
-
-async function startGame() {
-  await startNewSession({
-    durationSeconds: 180,
-    selectedQuestionSetIds: ["lf1", "lf2"],
-  });
 }
 </script>
 
 <style scoped>
-.home-view {
+.home {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 420px));
-  place-content: center;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
   gap: 1.5rem;
-  padding: 2rem;
+  max-width: 860px;
+  margin: 0 auto;
 }
 
-.home-view__panel {
+.home__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.home__title {
+  margin: 0;
+  font-size: 1.8rem;
+  color: var(--text-h);
+}
+
+.home__auth {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.home__auth-name {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.home__body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.card {
   padding: 1.5rem;
   border: 1px solid var(--border);
   border-radius: 1.25rem;
   background: var(--bg);
-  color: var(--text);
   box-shadow: var(--shadow);
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.home-view__panel--wide {
-  text-align: left;
-}
-
-.home-view__panel h1,
-.home-view__panel h2,
-.home-view__panel strong {
+.card__title {
+  margin: 0;
+  font-size: 1.1rem;
   color: var(--text-h);
 }
 
-.home-view__actions button {
-  padding: 0.8rem 1.2rem;
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.field__label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.field__input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.hint--error {
+  color: #ef4444;
+  opacity: 1;
+}
+
+.btn {
+  padding: 0.7rem 1.2rem;
   border: 0;
   border-radius: 999px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn--primary {
   background: var(--accent);
   color: #fff;
-  cursor: pointer;
+  font-weight: 600;
 }
 
-.home-view__status,
-.home-view__hint {
-  margin: 0;
-}
-
-.home-view__actions {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.home-view__actions--stacked {
-  justify-content: flex-start;
-}
-
-.home-view__actions button:disabled {
-  cursor: progress;
-  opacity: 0.7;
-}
-
-.home-view__result {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.home-view__result p {
-  margin: 0;
-}
-
-.home-view__result pre {
-  margin: 0;
-  padding: 1rem;
-  overflow: auto;
-  border-radius: 0.75rem;
-  background: var(--code-bg);
-  color: var(--text-h);
+.btn--ghost {
+  background: transparent;
   border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn--full {
+  width: 100%;
 }
 </style>
