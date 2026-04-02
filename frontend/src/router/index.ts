@@ -14,7 +14,7 @@ export const router = createRouter({
       component: () => import("../views/LoginRegisterView.vue"),
     },
     {
-      path: "/game/:setId",
+      path: "/game/",
       name: "gameplay",
       component: () => import("../views/GameplayView.vue"),
     },

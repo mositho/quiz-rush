@@ -1,3 +1,4 @@
+//TODO Add a play button if logged in and check change logic based on login status.
 <template>
   <main class="home-view">
     <section class="home-view__panel">

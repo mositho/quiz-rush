@@ -1,103 +1,117 @@
 <template>
-  <div class="gameplay">
-    <h1>Gameplay</h1>
-
-    <div v-if="loading">Loading questions…</div>
-    <div v-else-if="error">Error: {{ error }}</div>
-    <div v-else>
-      <div v-if="currentQuestion">
-        <QuestionCard
-          :question="currentQuestion.Question"
-          :answers="currentAnswers"
-          @select="onSelect"
-        />
-
-        <div class="controls">
-          <button v-if="!answered" class="next-btn" disabled>Choose an answer</button>
+  <div class="gameplay-view">
+    <div v-if="loading" class="gameplay-view__loading">Loading session...</div>
+    <div v-else-if="error" class="gameplay-view__error">{{ error }}</div>
+    
+    <div v-else-if="session" class="game-container">
+      <header class="gameplay-view__header">
+        <div class="gameplay-view__score">Score: {{ session.currentScore }}</div>
+        <div class="gameplay-view__progress">
+          {{ session.answeredQuestions }} / {{ session.totalQuestions }}
         </div>
-
-        <div class="feedback" v-if="answered">
-          <p v-if="lastCorrect">Correct!</p>
-          <p v-else>Wrong — correct answer: {{ correctText }}</p>
-        </div>
+      </header>
+      <QuestionCard
+        v-if="session.currentQuestion"
+        :question="session.currentQuestion"
+        @select="sendAnswer"
+      />
+    
+      <div v-else class="gameplay-view__finished">
+        <h2>Game Finished!</h2>
+        <p>Final Score: {{ session.currentScore }}</p>
+        <p>Correct: {{ session.correctQuestions }} / {{ session.answeredQuestions }}</p>
+        <button @click="goHome">Back to Home</button>
       </div>
-
-      <div v-if="finished" class="finished">
-        <h2>Finished</h2>
-        <p>Score: {{ score }} / {{ questions.length }}</p>
-        <button @click="restart">Play again</button>
-      </div>
+    
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useRoute } from "vue-router";
-import { apiFetch } from "../services/api";
-import QuestionCard from "../components/QuestionCard.vue";
+import { onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useGameSession } from "@/composables/useGameSession";
 
-interface Question {
-question: string;
-options: string[];
-correctAnswer: number;
-}
-const route = useRoute();
-const setId = String(route.params.setId || "1");
-const loading = ref(true);
-const error = ref<string | null>(null);
-const questions = ref<Question[]>([]);
-const currentIndex = ref(0);
-const score = ref(0);
-const answered = ref(false);
-const correct = ref(false);
-onMounted(async () => {
-  try {
-    questions.value = await apiFetch(`/sets/${setId}`);
-  } catch (e) {
-    error.value = "Failed to load questions";
-  } finally {
-    loading.value = false;
-  }
+const router = useRouter();
+const { session, loading, error, startNewSession, confirmAnswer } = useGameSession();
+
+onMounted(() => {
+  startNewSession({
+    durationSeconds: 180,
+    selectedQuestionSetIds: ["lf1", "lf2"]
+  });
 });
-const currentQuestion = computed(() => questions.value[currentIndex.value]);
-const currentAnswers = computed(() =>
-  currentQuestion.value?.Options.map((text, i) => ({ id: i, text })) || []
-);
-const correctText = computed(() => currentQuestion.value?.Options[currentQuestion.value.CorrectAnswer]);
-function onSelect(ans: { id: number }) {
-  if (answered.value) return;
-  answered.value = true;
-  correct.value = ans.id === currentQuestion.value.CorrectAnswer;
-  if (correct.value) score.value++;
-}
-function nextQuestion() {
-  answered.value = false;
-  correct.value = false;
-  currentIndex.value++;
-}
 
-const finished = computed(() => currentIndex.value >= questions.value.length);
-function restart() {
-  currentIndex.value = 0;
-  score.value = 0;
-  answered.value = false;
-  correct.value = false;
+function sendAnswer(index: number) {
+  confirmAnswer(index);
 }
-
+function goHome() {
+  router.push("/");
+}
 </script>
 
 <style scoped>
-.gameplay {
+.gameplay-view {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.gameplay-view__loading,
+.gameplay-view__error {
+  text-align: center;
+  padding: 2rem;
+}
+
+.gameplay-view__error {
+  color: #ef4444;
+}
+
+.game-container {
+  width: 100%;
+  max-width: 600px;
+}
+
+.gameplay-view__header {
+  display: flex;
+  justify-content: space-between;
   padding: 1rem;
+  margin-bottom: 1rem;
+  background: var(--bg);
+  border-radius: 0.5rem;
 }
-.next-btn {
-  margin-top: 0.6rem;
+
+.gameplay-view__score {
+  font-weight: bold;
+  font-size: 1.25rem;
 }
-.feedback {
-  margin-top: 0.6rem;
+
+.gameplay-view__progress {
+  color: var(--text);
+  opacity: 0.7;
 }
-.finished {
+
+.gameplay-view__finished {
+  text-align: center;
+  padding: 2rem;
+  background: var(--bg);
+  border-radius: 1rem;
+}
+
+.gameplay-view__finished h2 {
+  margin-top: 0;
+}
+
+.gameplay-view__finished button {
   margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
 }
 </style>
