@@ -30,7 +30,7 @@ services:
             - keycloak_postgres_data:/var/lib/postgresql/data
 
     questions-backend:
-        image: golang:1.25
+        image: golang:1.25.8
         container_name: quiz-rush-questions-backend
         working_dir: /app
         volumes:
@@ -65,7 +65,7 @@ services:
                 condition: service_healthy
 
     game-backend:
-        image: golang:1.25
+        image: golang:1.25.8
         container_name: quiz-rush-game-backend
         restart: on-failure
         working_dir: /app
