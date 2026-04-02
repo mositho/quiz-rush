@@ -215,6 +215,59 @@ sequenceDiagram
   H-->>V: 200 session + answer result
 ```
 
+## Recommended delivery pipeline
+
+The repo already has fast service-specific CI workflows. A good next step is to keep those path-based checks, then add one end-to-end gate that proves the whole stack still works together before anything is released.
+
+- Pull requests: run only the affected service jobs (`frontend`, `game-backend`, `questions-backend`) for quick feedback.
+- Integration gate: after service checks pass, build the Docker Compose stack and run smoke tests against the real multi-service setup with Postgres and Keycloak.
+- Release on `main`: publish versioned Docker images for `frontend`, `game-backend`, and `questions-backend` only after the integration gate passes.
+- Deployment: roll the exact same image digests to staging first, rerun smoke tests, then promote to production with a manual approval step.
+- Operations hygiene: keep Dependabot for dependency bumps and run database migrations as part of backend deployment before traffic is shifted.
+
+Recommended CI/CD sequence:
+
+```mermaid
+sequenceDiagram
+  actor Dev as Developer
+  participant GH as GitHub Actions
+  participant F as Frontend CI
+  participant Q as Questions CI
+  participant G as Game CI
+  participant I as Integration Gate
+  participant C as Docker Compose Stack
+  participant R as Container Registry
+  participant S as Staging
+  participant P as Production
+
+  Dev->>GH: Push branch or open pull request
+  par Changed frontend files
+    GH->>F: pnpm install, lint, format:check, build
+    F-->>GH: pass/fail
+  and Changed questions service files
+    GH->>Q: gofmt, golangci-lint, go test ./...
+    Q-->>GH: pass/fail
+  and Changed game service files
+    GH->>G: gofmt, golangci-lint, go test ./...
+    G-->>GH: pass/fail
+  end
+
+  GH->>I: Start only if all required checks pass
+  I->>C: Build and boot frontend + backends + Postgres + Keycloak
+  I->>C: Run smoke tests for health, auth, sets, session flow
+  C-->>I: integration result
+
+  alt Branch is main and integration passed
+    GH->>R: Build and publish immutable Docker images
+    GH->>S: Deploy same image digests to staging
+    S-->>GH: post-deploy smoke tests pass
+    GH->>P: Manual approval, then promote same digests
+    P-->>Dev: production deployment complete
+  else Pull request or non-main branch
+    GH-->>Dev: report CI status only
+  end
+```
+
 ## Environment setup
 
 The project uses three tracked env files plus one optional local override file:
