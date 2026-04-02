@@ -15,6 +15,7 @@ export function useGameSession() {
     error.value = null;
     try {
       session.value = await apiStartSession(request);
+      console.log("Started new session:", session.value);
       router.push(`/game/${session.value.sessionId}`);
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to start new session";

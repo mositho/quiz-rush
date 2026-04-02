@@ -53,11 +53,10 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { useRouter } from "vue-router";
-
 import { ApiError, apiFetch } from "../services/api";
 import { authState, loginWithKeycloak, logoutFromKeycloak } from "../services/keycloak";
 import { useGameSession } from "@/composables/useGameSession";
+import { router } from "@/router";
 
 interface LeaderboardResponse {
   packageSlug: string;
@@ -74,8 +73,7 @@ interface RequestResult {
   body: string;
 }
 
-const router = useRouter();
-const { session, startNewSession } = useGameSession();
+const {startNewSession } = useGameSession();
 const lastResult = ref<RequestResult | null>(null);
 const loading = ref(false);
 function handleLogin() {
