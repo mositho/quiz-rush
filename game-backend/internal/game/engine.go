@@ -9,15 +9,14 @@ import (
 )
 
 const (
-	defaultCooldown  = 3 * time.Second
-	speedBonusWindow = 10 * time.Second
+	wrongAnswerPenalty = 3 * time.Second
+	speedBonusWindow   = 10 * time.Second
 )
 
 var (
 	ErrNoQuestionsLoaded      = errors.New("no questions loaded")
 	ErrQuestionSetRequired    = errors.New("at least one question set is required")
 	ErrSessionAlreadyFinished = errors.New("session is already finished")
-	ErrCooldownActive         = errors.New("session is in cooldown")
 	ErrNoCurrentQuestion      = errors.New("no current question available")
 	ErrInvalidAnswerIndex     = errors.New("selected answer index is invalid")
 )
@@ -26,7 +25,6 @@ type SessionStatus string
 
 const (
 	SessionStatusActive   SessionStatus = "active"
-	SessionStatusCooldown SessionStatus = "cooldown"
 	SessionStatusFinished SessionStatus = "finished"
 )
 
@@ -70,7 +68,6 @@ type SessionQuestion struct {
 	Correct             *bool          `db:"is_correct"`
 	AwardedPoints       *int           `db:"awarded_points"`
 	ResponseTime        *time.Duration `db:"-"`
-	CooldownApplied     *time.Duration `db:"-"`
 }
 
 type Session struct {
@@ -79,7 +76,6 @@ type Session struct {
 	FinishReason           *FinishReason     `db:"finish_reason"`
 	StartedAt              time.Time         `db:"started_at"`
 	EndsAt                 time.Time         `db:"ends_at"`
-	CooldownUntil          *time.Time        `db:"cooldown_until"`
 	FinishedAt             *time.Time        `db:"finished_at"`
 	SaveDeadlineAt         *time.Time        `db:"save_deadline_at"`
 	DurationSeconds        int               `db:"duration_seconds"`
@@ -108,7 +104,6 @@ type AnswerResult struct {
 	Correct        bool          `json:"correct"`
 	AwardedPoints  int           `json:"awardedPoints"`
 	ResponseTimeMs int64         `json:"responseTimeMs"`
-	CooldownUntil  *string       `json:"cooldownUntil,omitempty"`
 	NextQuestion   *Question     `json:"nextQuestion,omitempty"`
 	Finished       bool          `json:"finished"`
 	FinishReason   *FinishReason `json:"finishReason,omitempty"`
@@ -188,14 +183,6 @@ func (s *Session) Sync(now time.Time) {
 
 	if !now.Before(s.EndsAt) {
 		s.finish(now, FinishReasonTimerElapsed)
-		return
-	}
-
-	if s.Status == SessionStatusCooldown && s.CooldownUntil != nil && !now.Before(*s.CooldownUntil) {
-		s.CooldownUntil = nil
-		if !s.activateCurrentQuestion(now) {
-			s.finish(now, FinishReasonQuestionPoolExhausted)
-		}
 	}
 }
 
@@ -219,9 +206,6 @@ func (s *Session) SubmitAnswer(now time.Time, selectedAnswerIndex int) (AnswerRe
 
 	if s.Status == SessionStatusFinished {
 		return AnswerResult{Finished: true, FinishReason: s.FinishReason}, ErrSessionAlreadyFinished
-	}
-	if s.Status == SessionStatusCooldown {
-		return AnswerResult{}, ErrCooldownActive
 	}
 
 	index, ok := s.currentQuestionIndexValue()
@@ -257,14 +241,33 @@ func (s *Session) SubmitAnswer(now time.Time, selectedAnswerIndex int) (AnswerRe
 	} else {
 		current.AwardedPoints = intPointer(0)
 		s.WrongQuestions++
-		cooldown := defaultCooldown
-		current.CooldownApplied = durationPointer(cooldown)
-		cooldownUntil := answeredAt.Add(cooldown)
-		s.CooldownUntil = &cooldownUntil
-		s.Status = SessionStatusCooldown
+		s.EndsAt = s.EndsAt.Add(-wrongAnswerPenalty)
 	}
 
 	s.advanceCurrentQuestionIndex()
+
+	// Re-check timer after potential EndsAt deduction
+	if !now.Before(s.EndsAt) {
+		s.finish(now, FinishReasonTimerElapsed)
+		return AnswerResult{
+			Correct:        isCorrect,
+			AwardedPoints:  points,
+			ResponseTimeMs: responseTime.Milliseconds(),
+			Finished:       true,
+			FinishReason:   s.FinishReason,
+		}, nil
+	}
+
+	if !s.activateCurrentQuestion(answeredAt) {
+		s.finish(answeredAt, FinishReasonQuestionPoolExhausted)
+		return AnswerResult{
+			Correct:        isCorrect,
+			AwardedPoints:  points,
+			ResponseTimeMs: responseTime.Milliseconds(),
+			Finished:       true,
+			FinishReason:   s.FinishReason,
+		}, nil
+	}
 
 	result := AnswerResult{
 		Correct:        isCorrect,
@@ -272,26 +275,9 @@ func (s *Session) SubmitAnswer(now time.Time, selectedAnswerIndex int) (AnswerRe
 		ResponseTimeMs: responseTime.Milliseconds(),
 	}
 
-	if isCorrect {
-		if !s.activateCurrentQuestion(answeredAt) {
-			s.finish(answeredAt, FinishReasonQuestionPoolExhausted)
-		}
-	} else if s.CooldownUntil != nil {
-		cooldownUntil := s.CooldownUntil.UTC().Format(time.RFC3339Nano)
-		result.CooldownUntil = &cooldownUntil
-	}
-
-	if s.Status == SessionStatusFinished {
-		result.Finished = true
-		result.FinishReason = s.FinishReason
-		return result, nil
-	}
-
-	if s.Status == SessionStatusActive {
-		nextQuestion, err := s.CurrentQuestion(answeredAt)
-		if err == nil {
-			result.NextQuestion = nextQuestion
-		}
+	nextQuestion, err := s.CurrentQuestion(answeredAt)
+	if err == nil {
+		result.NextQuestion = nextQuestion
 	}
 
 	return result, nil
@@ -374,7 +360,6 @@ func (s *Session) finish(now time.Time, reason FinishReason) {
 
 	s.Status = SessionStatusFinished
 	s.FinishReason = &reason
-	s.CooldownUntil = nil
 	s.FinishedAt = timePointer(now)
 	s.CurrentQuestionIndex = nil
 }
