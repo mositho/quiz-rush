@@ -6,12 +6,13 @@ import {
   startSession as apiStartSession,
   submitAnswer as apiSubmitAnswer,
 } from "@/services/api";
+import type { SubmitAnswerResult } from "@/types/apiResponses";
 import { router } from "@/router";
-
 const session = ref<Session | null>(null);
 const loading = ref(false);
 const submitting = ref(false);
 const error = ref<string | null>(null);
+const answerResult = ref<SubmitAnswerResult | null>(null);
 
 export function useGameSession() {
   async function startNewSession(request: StartSessionRequest) {
@@ -31,12 +32,11 @@ export function useGameSession() {
 
   async function confirmAnswer(answerIndex: number) {
     if (!session.value?.sessionId || submitting.value) return;
-
     submitting.value = true;
     error.value = null;
     try {
-      session.value = (await apiSubmitAnswer(session.value.sessionId, answerIndex)).session;
-      //SomeFeedback that the answer was correct or wrong could be implemented here
+      const response = await apiSubmitAnswer(session.value.sessionId, answerIndex);
+      answerResult.value = response.result;
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to submit answer";
     } finally {
@@ -65,5 +65,6 @@ export function useGameSession() {
     startNewSession,
     confirmAnswer,
     loadSession,
+    answerResult: readonly(answerResult),
   };
 }
