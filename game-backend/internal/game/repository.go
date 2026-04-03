@@ -680,7 +680,6 @@ func insertSessionRow(
 			finish_reason,
 			started_at,
 			ends_at,
-			cooldown_until,
 			finished_at,
 			save_deadline_at,
 			duration_seconds,
@@ -695,8 +694,8 @@ func insertSessionRow(
 			updated_at
 		)
 		values (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9,
-			$10, $11::jsonb, $12, $13, $14, $15, $16, $17, $18, now()
+			$1, $2, $3, $4, $5, $6, $7, $8,
+			$9, $10::jsonb, $11, $12, $13, $14, $15, $16, $17, now()
 		)
 		returning id
 		`,
@@ -706,7 +705,6 @@ func insertSessionRow(
 		finishReasonValue(session.FinishReason),
 		session.StartedAt,
 		session.EndsAt,
-		session.CooldownUntil,
 		session.FinishedAt,
 		saveDeadlineAt,
 		session.DurationSeconds,
@@ -765,11 +763,10 @@ func insertSessionQuestionRow(ctx context.Context, tx dbTX, sessionID string, se
 			is_correct,
 			awarded_points,
 			response_time_ms,
-			cooldown_applied_ms,
 			updated_at
 		)
 		values (
-			$1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb, $9, $10, $11, $12, $13, $14, $15, $16, now()
+			$1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb, $9, $10, $11, $12, $13, $14, $15, now()
 		)
 		`,
 		sessionID,
@@ -787,7 +784,6 @@ func insertSessionQuestionRow(ctx context.Context, tx dbTX, sessionID string, se
 		sessionQuestion.Correct,
 		sessionQuestion.AwardedPoints,
 		durationMilliseconds(sessionQuestion.ResponseTime),
-		durationMilliseconds(sessionQuestion.CooldownApplied),
 	)
 	if err != nil {
 		return fmt.Errorf("insert session question: %w", err)
@@ -805,7 +801,6 @@ func loadSessionRow(ctx context.Context, db dbTX, sessionID string, lock bool) (
 		FinishReason           *string    `db:"finish_reason"`
 		StartedAt              time.Time  `db:"started_at"`
 		EndsAt                 time.Time  `db:"ends_at"`
-		CooldownUntil          *time.Time `db:"cooldown_until"`
 		FinishedAt             *time.Time `db:"finished_at"`
 		SaveDeadlineAt         *time.Time `db:"save_deadline_at"`
 		DurationSeconds        int        `db:"duration_seconds"`
@@ -828,7 +823,6 @@ func loadSessionRow(ctx context.Context, db dbTX, sessionID string, lock bool) (
 			finish_reason,
 			started_at,
 			ends_at,
-			cooldown_until,
 			finished_at,
 			save_deadline_at,
 			duration_seconds,
@@ -861,7 +855,6 @@ func loadSessionRow(ctx context.Context, db dbTX, sessionID string, lock bool) (
 		Status:                 SessionStatus(row.Status),
 		StartedAt:              row.StartedAt,
 		EndsAt:                 row.EndsAt,
-		CooldownUntil:          row.CooldownUntil,
 		FinishedAt:             row.FinishedAt,
 		SaveDeadlineAt:         row.SaveDeadlineAt,
 		DurationSeconds:        row.DurationSeconds,
@@ -898,7 +891,6 @@ func loadSessionQuestions(ctx context.Context, db dbTX, sessionID string) ([]Ses
 		Correct             *bool      `db:"is_correct"`
 		AwardedPoints       *int       `db:"awarded_points"`
 		ResponseTimeMS      *int       `db:"response_time_ms"`
-		CooldownAppliedMS   *int       `db:"cooldown_applied_ms"`
 	}
 
 	var tempQuestions []tempSessionQuestion
@@ -921,8 +913,7 @@ func loadSessionQuestions(ctx context.Context, db dbTX, sessionID string) ([]Ses
 			selected_answer_index,
 			is_correct,
 			awarded_points,
-			response_time_ms,
-			cooldown_applied_ms
+			response_time_ms
 		from game_session_questions
 		where session_id = $1
 		order by position asc
@@ -963,10 +954,6 @@ func loadSessionQuestions(ctx context.Context, db dbTX, sessionID string) ([]Ses
 			duration := time.Duration(*tmp.ResponseTimeMS) * time.Millisecond
 			sq.ResponseTime = &duration
 		}
-		if tmp.CooldownAppliedMS != nil {
-			duration := time.Duration(*tmp.CooldownAppliedMS) * time.Millisecond
-			sq.CooldownApplied = &duration
-		}
 
 		sessionQuestions = append(sessionQuestions, sq)
 	}
@@ -982,21 +969,20 @@ func updateSessionRow(ctx context.Context, tx dbTX, session *Session) error {
 		set
 			status = $2,
 			finish_reason = $3,
-			cooldown_until = $4,
-			finished_at = $5,
-			save_deadline_at = $6,
-			current_question_index = $7,
-			answered_questions = $8,
-			correct_questions = $9,
-			wrong_questions = $10,
-			current_score = $11,
+			finished_at = $4,
+			save_deadline_at = $5,
+			current_question_index = $6,
+			answered_questions = $7,
+			correct_questions = $8,
+			wrong_questions = $9,
+			current_score = $10,
+			ends_at = $11,
 			updated_at = now()
 		where id = $1
 		`,
 		session.ID,
 		string(session.Status),
 		finishReasonValue(session.FinishReason),
-		session.CooldownUntil,
 		session.FinishedAt,
 		session.SaveDeadlineAt,
 		session.CurrentQuestionIndex,
@@ -1004,6 +990,7 @@ func updateSessionRow(ctx context.Context, tx dbTX, session *Session) error {
 		session.CorrectQuestions,
 		session.WrongQuestions,
 		session.CurrentScore,
+		session.EndsAt,
 	)
 	if err != nil {
 		return fmt.Errorf("update session: %w", err)
@@ -1034,7 +1021,6 @@ func updateSessionQuestionRow(ctx context.Context, tx dbTX, sessionID string, se
 			is_correct = $6,
 			awarded_points = $7,
 			response_time_ms = $8,
-			cooldown_applied_ms = $9,
 			updated_at = now()
 		where session_id = $1 and position = $2
 		`,
@@ -1046,7 +1032,6 @@ func updateSessionQuestionRow(ctx context.Context, tx dbTX, sessionID string, se
 		sessionQuestion.Correct,
 		sessionQuestion.AwardedPoints,
 		durationMilliseconds(sessionQuestion.ResponseTime),
-		durationMilliseconds(sessionQuestion.CooldownApplied),
 	)
 	if err != nil {
 		return fmt.Errorf("update session question: %w", err)

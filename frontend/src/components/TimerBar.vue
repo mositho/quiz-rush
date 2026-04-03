@@ -42,7 +42,7 @@ function tick() {
 
 function stopTimer() {
   if (intervalId !== null) {
-    window.clearInterval(intervalId);
+    clearInterval(intervalId);
     intervalId = null;
   }
 }
@@ -52,7 +52,7 @@ function startTimer() {
   tick();
 
   if (remainingMs.value > 0) {
-    intervalId = window.setInterval(tick, 1000);
+    intervalId = setInterval(tick, 1000);
   }
 }
 

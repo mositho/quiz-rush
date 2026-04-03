@@ -94,10 +94,9 @@ func TestSubmitAnswerPersistsFinishedAnonymousScoreWithDatabase(t *testing.T) {
 
 	var response struct {
 		Session struct {
-			Status          string  `json:"status"`
-			AnsweredCount   int     `json:"answeredQuestions"`
-			CurrentScore    int     `json:"currentScore"`
-			CooldownUntil   *string `json:"cooldownUntil"`
+			Status          string `json:"status"`
+			AnsweredCount   int    `json:"answeredQuestions"`
+			CurrentScore    int    `json:"currentScore"`
 			CurrentQuestion *struct {
 				QuestionID string `json:"questionId"`
 			} `json:"currentQuestion"`

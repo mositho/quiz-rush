@@ -35,7 +35,6 @@ type sessionResponse struct {
 	FinishReason           *FinishReason `json:"finishReason,omitempty"`
 	StartedAt              string        `json:"startedAt"`
 	EndsAt                 string        `json:"endsAt"`
-	CooldownUntil          *string       `json:"cooldownUntil,omitempty"`
 	DurationSeconds        int           `json:"durationSeconds"`
 	SelectedQuestionSetIDs []string      `json:"selectedQuestionSetIds"`
 	CurrentQuestionIndex   *int          `json:"currentQuestionIndex,omitempty"`
@@ -300,7 +299,7 @@ func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 			statusCode = http.StatusUnauthorized
 		case errors.Is(err, errSessionForbidden):
 			statusCode = http.StatusForbidden
-		case errors.Is(err, ErrSessionAlreadyFinished), errors.Is(err, ErrCooldownActive), errors.Is(err, ErrNoCurrentQuestion), errors.Is(err, ErrInvalidAnswerIndex):
+		case errors.Is(err, ErrSessionAlreadyFinished), errors.Is(err, ErrNoCurrentQuestion), errors.Is(err, ErrInvalidAnswerIndex):
 			statusCode = http.StatusBadRequest
 		}
 		writeJSON(w, statusCode, map[string]string{"error": err.Error()})
@@ -648,12 +647,6 @@ func (h *Handler) applyAnonymousSaveDeadline(session *Session, now time.Time) {
 }
 
 func buildSessionResponse(session *Session, now time.Time) sessionResponse {
-	var cooldownUntil *string
-	if session.CooldownUntil != nil {
-		value := session.CooldownUntil.UTC().Format(time.RFC3339Nano)
-		cooldownUntil = &value
-	}
-
 	currentQuestion, currentQuestionErr := session.CurrentQuestion(now)
 	if currentQuestionErr != nil {
 		currentQuestion = nil
@@ -665,7 +658,6 @@ func buildSessionResponse(session *Session, now time.Time) sessionResponse {
 		FinishReason:           session.FinishReason,
 		StartedAt:              session.StartedAt.UTC().Format(time.RFC3339Nano),
 		EndsAt:                 session.EndsAt.UTC().Format(time.RFC3339Nano),
-		CooldownUntil:          cooldownUntil,
 		DurationSeconds:        session.DurationSeconds,
 		SelectedQuestionSetIDs: session.SelectedQuestionSetIDs,
 		CurrentQuestionIndex:   session.CurrentQuestionIndex,

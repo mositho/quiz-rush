@@ -20,8 +20,8 @@
             "implicitFlowEnabled": false,
             "serviceAccountsEnabled": false,
             "protocol": "openid-connect",
-            "redirectUris": ["http://localhost/*", "http://localhost:5173/*"],
-            "webOrigins": ["*"],
+            "redirectUris": ["https://quiz-rush.mh-home.net/*"],
+            "webOrigins": ["https://quiz-rush.mh-home.net"],
             "attributes": {
                 "pkce.code.challenge.method": "S256",
                 "post.logout.redirect.uris": "+"

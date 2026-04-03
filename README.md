@@ -301,6 +301,67 @@ Start everything with:
 docker compose up --build
 ```
 
+### Development compose override (Vue HMR)
+
+For Docker-based frontend development with Vue hot module replacement, use the new dev override file.
+
+Start the stack with:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+Then open the frontend at `http://localhost:5173`.
+
+Exposed development endpoints:
+
+- Game backend: `http://localhost:8080`
+- Keycloak: `http://localhost:8082/account`
+
+Notes:
+
+- Frontend source is bind-mounted from `./frontend` into the container.
+- `node_modules` is kept in a Docker volume to avoid host/container binary conflicts.
+- Frontend uses direct service URLs via `VITE_API_BASE_URL` and `VITE_KEYCLOAK_URL` (configured in `docker-compose.dev.yml`).
+- Keycloak realm dev config allows `http://localhost:5173` as redirect origin for the `quiz-rush-app` client.
+- Dev override uses a dedicated Keycloak Postgres volume to avoid stale realm config from other compose profiles.
+- If an older dev Keycloak volume exists, recreate it once: `docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v keycloak keycloak-postgres`.
+
+### Production compose override
+
+The production setup uses a second compose file that overrides local development defaults.
+
+Use this command order so production settings win:
+
+```sh
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Production-specific behavior in the override:
+
+- No service publishes host ports
+- Keycloak runs in production mode with `start --import-realm`
+- Required secrets and URLs fail fast when missing
+- Keycloak imports the file selected by `KEYCLOAK_IMPORT_FILE`
+- `game-backend` and `questions-backend` are built as container images (no source-code bind mount required)
+- Restart policy is bounded (`on-failure:5`) to prevent endless crash loops during debugging
+- `game-backend` retries OIDC startup to wait for Keycloak readiness
+
+Minimum required variables in `.env.prod`:
+
+- `GAME_POSTGRES_PASSWORD`
+- `KEYCLOAK_DB_PASSWORD`
+- `KEYCLOAK_ADMIN_PASSWORD`
+- `KEYCLOAK_HOSTNAME`
+- `KEYCLOAK_IMPORT_FILE=./keycloak/realm-export.prod.json`
+- `KEYCLOAK_ISSUER_URL`
+- `CORS_ALLOWED_ORIGIN`
+- `VITE_KEYCLOAK_URL`
+- `AUTH_INIT_MAX_WAIT=180s`
+- `AUTH_INIT_RETRY_INTERVAL=5s`
+
+Update `keycloak/realm-export.prod.json` with your real frontend domain before deployment.
+
 If you changed Postgres usernames/database names and see errors like `FATAL: role ... does not exist`, recreate the database volumes once:
 
 ```sh
