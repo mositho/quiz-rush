@@ -43,7 +43,7 @@ export function useGameSession() {
       submitting.value = false;
     }
   }
-  
+
   async function loadSession(sessionId: string) {
     loading.value = true;
     error.value = null;
@@ -68,5 +68,3 @@ export function useGameSession() {
     answerResult: readonly(answerResult),
   };
 }
-
-

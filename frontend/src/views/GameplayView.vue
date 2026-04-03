@@ -11,13 +11,12 @@
         </div>
       </header>
       <TimerBar :ends-at="session.endsAt" :duration-seconds="session.durationSeconds" />
-      
+
       <QuestionCard
         v-if="session.currentQuestion"
         :question="session.currentQuestion"
         @answer-selected="sendAnswer"
       />
-      
     </div>
   </div>
 </template>
@@ -48,37 +47,35 @@ async function sendAnswer(index: number) {
   setTimeout(() => {
     restGameHub();
   }, 1000);
-
 }
 
 function showAnswerFeedback(index: number, correct: boolean): void {
-  const color = correct ? 'green' : 'red';
-  const button = document.querySelectorAll('.answer-btn')[index] as HTMLButtonElement;
+  const color = correct ? "green" : "red";
+  const button = document.querySelectorAll(".answer-btn")[index] as HTMLButtonElement;
   if (correct) {
-    const score = document.querySelector('.gameplay-view__score') as HTMLDivElement;
-    score.textContent = 'Score: ' + session.value?.currentScore;
+    const score = document.querySelector(".gameplay-view__score") as HTMLDivElement;
+    score.textContent = "Score: " + session.value?.currentScore;
   } else {
-    const timerBar = document.querySelector('.timer-bar') as HTMLDivElement;
-    timerBar.style.backgroundColor = 'red';
+    const timerBar = document.querySelector(".timer-bar") as HTMLDivElement;
+    timerBar.style.backgroundColor = "red";
   }
   button.style.backgroundColor = color;
 }
 
 function restGameHub() {
   if (!session.value) return;
-  const answerButtons = document.querySelectorAll('.answer-btn');
-  answerButtons.forEach(button => {
+  const answerButtons = document.querySelectorAll(".answer-btn");
+  answerButtons.forEach((button) => {
     if (button instanceof HTMLElement) {
-      button.style.backgroundColor = '';
+      button.style.backgroundColor = "";
     }
   });
-  const timerBar = document.querySelector('.timer-bar') as HTMLDivElement;
+  const timerBar = document.querySelector(".timer-bar") as HTMLDivElement;
   if (timerBar) {
-    timerBar.style.backgroundColor = '';
+    timerBar.style.backgroundColor = "";
   }
   loadSession(session.value.sessionId);
 }
-
 </script>
 
 <style scoped>
