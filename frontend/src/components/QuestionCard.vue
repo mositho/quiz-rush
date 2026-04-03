@@ -28,6 +28,12 @@ function selectAnswer(index: number) {
   emit('answerSelected', index);
 }
 
+function colorButton(index:number, color: string) {
+  const button = document.querySelectorAll('.answer-btn')[index] as HTMLButtonElement;
+  button.style.backgroundColor = color;
+} defineExpose({
+  colorButton
+});
 </script>
 
 <style scoped>

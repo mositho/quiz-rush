@@ -11,17 +11,13 @@
         </div>
       </header>
       <TimerBar :ends-at="session.endsAt" :duration-seconds="session.durationSeconds" />
+      
       <QuestionCard
         v-if="session.currentQuestion"
         :question="session.currentQuestion"
         @answer-selected="sendAnswer"
       />
-      <div v-else class="gameplay-view__finished">
-        <h2>Game Finished!</h2>
-        <p>Final Score: {{ session.currentScore }}</p>
-        <p>Correct: {{ session.correctQuestions }} / {{ session.answeredQuestions }}</p>
-        <button @click="goHome">Back to Home</button>
-      </div>
+      
     </div>
   </div>
 </template>
@@ -35,7 +31,7 @@ import TimerBar from "@/components/TimerBar.vue";
 
 const router = useRouter();
 const route = useRoute();
-const { session, loading, error, loadSession, confirmAnswer } = useGameSession();
+const { session, loading, error, loadSession, confirmAnswer, answerResult } = useGameSession();
 
 onMounted(async () => {
   const sessionId = route.params.sessionId as string;
@@ -46,12 +42,43 @@ onMounted(async () => {
   }
 });
 
-function sendAnswer(index: number) {
-  confirmAnswer(index);
+async function sendAnswer(index: number) {
+  await confirmAnswer(index);
+  showAnswerFeedback(index, answerResult.value?.correct ?? false);
+  setTimeout(() => {
+    restGameHub();
+  }, 1000);
+
 }
-function goHome() {
-  router.push("/");
+
+function showAnswerFeedback(index: number, correct: boolean): void {
+  const color = correct ? 'green' : 'red';
+  const button = document.querySelectorAll('.answer-btn')[index] as HTMLButtonElement;
+  if (correct) {
+    const score = document.querySelector('.gameplay-view__score') as HTMLDivElement;
+    score.textContent = 'Score: ' + session.value?.currentScore;
+  } else {
+    const timerBar = document.querySelector('.timer-bar') as HTMLDivElement;
+    timerBar.style.backgroundColor = 'red';
+  }
+  button.style.backgroundColor = color;
 }
+
+function restGameHub() {
+  if (!session.value) return;
+  const answerButtons = document.querySelectorAll('.answer-btn');
+  answerButtons.forEach(button => {
+    if (button instanceof HTMLElement) {
+      button.style.backgroundColor = '';
+    }
+  });
+  const timerBar = document.querySelector('.timer-bar') as HTMLDivElement;
+  if (timerBar) {
+    timerBar.style.backgroundColor = '';
+  }
+  loadSession(session.value.sessionId);
+}
+
 </script>
 
 <style scoped>
