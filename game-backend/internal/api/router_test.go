@@ -50,6 +50,7 @@ func TestGameEndpointsReturnServiceUnavailableWhenDatabaseIsMissing(t *testing.T
 		{name: "get score", method: http.MethodGet, path: "/api/game/scores/score-123"},
 		{name: "leaderboard", method: http.MethodGet, path: "/api/game/leaderboards"},
 		{name: "current user", method: http.MethodGet, path: "/api/game/users/me"},
+		{name: "update current user", method: http.MethodPatch, path: "/api/game/users/me"},
 		{name: "user scores", method: http.MethodGet, path: "/api/game/users/user-123/scores"},
 		{name: "user stats", method: http.MethodGet, path: "/api/game/users/user-123/stats"},
 	}

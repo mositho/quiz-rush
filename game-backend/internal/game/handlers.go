@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"quiz-rush/game-backend/internal/httpjson"
@@ -58,6 +59,10 @@ type answerResponse struct {
 type publicUserResponse struct {
 	PublicUserID string `json:"publicUserId"`
 	DisplayName  string `json:"displayName"`
+}
+
+type updateCurrentUserRequest struct {
+	DisplayName string `json:"displayName"`
 }
 
 type scoreResponse struct {
@@ -470,6 +475,50 @@ func (h *Handler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load user"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, publicUserResponse{
+		PublicUserID: profile.PublicUserID,
+		DisplayName:  profile.DisplayName,
+	})
+}
+
+func (h *Handler) UpdateCurrentUser(w http.ResponseWriter, r *http.Request) {
+	if h.repository.db == nil {
+		writeServiceUnavailable(w)
+		return
+	}
+
+	authenticatedProfileID, err := h.authenticatedProfileID(r)
+	if err != nil || authenticatedProfileID == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": errAuthenticationRequired.Error()})
+		return
+	}
+
+	var request updateCurrentUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	displayName := strings.TrimSpace(request.DisplayName)
+	if displayName == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "display name is required"})
+		return
+	}
+	if len([]rune(displayName)) > 40 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "display name must be 40 characters or fewer"})
+		return
+	}
+
+	profile, err := h.repository.UpdateProfileDisplayName(r.Context(), *authenticatedProfileID, displayName)
+	if errors.Is(err, ErrProfileNotFound) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "user not found"})
+		return
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to update user"})
 		return
 	}
 

@@ -19,7 +19,7 @@ func NewRouter(db *pgxpool.Pool, authMiddleware func(http.Handler) http.Handler)
 
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{allowedOrigin},
-		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PATCH", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: false,
 	}))
@@ -44,6 +44,7 @@ func NewRouter(db *pgxpool.Pool, authMiddleware func(http.Handler) http.Handler)
 			gameRouter.Get("/scores/{scoreId}", gameHandler.GetScore)
 			gameRouter.Get("/leaderboards", gameHandler.GetLeaderboard)
 			gameRouter.Get("/users/me", gameHandler.GetCurrentUser)
+			gameRouter.Patch("/users/me", gameHandler.UpdateCurrentUser)
 			gameRouter.Get("/users/{publicUserId}/scores", gameHandler.GetUserScores)
 			gameRouter.Get("/users/{publicUserId}/stats", gameHandler.GetUserStats)
 		}

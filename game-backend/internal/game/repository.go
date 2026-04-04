@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"quiz-rush/game-backend/internal/middleware"
@@ -84,6 +85,7 @@ func (r *sessionRepository) EnsureUserProfile(ctx context.Context, user middlewa
 	if displayName == "" {
 		displayName = user.Subject
 	}
+	displayName = strings.TrimSpace(displayName)
 
 	publicUserID, err := newPublicUserID()
 	if err != nil {
@@ -97,8 +99,7 @@ func (r *sessionRepository) EnsureUserProfile(ctx context.Context, user middlewa
 		insert into user_profiles (public_user_id, keycloak_subject, display_name)
 		values ($1, $2, $3)
 		on conflict (keycloak_subject) do update
-		set display_name = excluded.display_name,
-		    updated_at = now()
+		set updated_at = now()
 		returning id
 		`,
 		publicUserID,
@@ -129,6 +130,33 @@ func (r *sessionRepository) GetProfileByID(ctx context.Context, id string) (*use
 		return nil, ErrProfileNotFound
 	} else if err != nil {
 		return nil, fmt.Errorf("get profile by id: %w", err)
+	}
+
+	return &profile, nil
+}
+
+func (r *sessionRepository) UpdateProfileDisplayName(ctx context.Context, id string, displayName string) (*userProfile, error) {
+	displayName = strings.TrimSpace(displayName)
+
+	var profile userProfile
+	err := pgxscan.Get(
+		ctx,
+		r.db,
+		&profile,
+		`
+		update user_profiles
+		set display_name = $2,
+		    updated_at = now()
+		where id = $1
+		returning id, public_user_id, display_name
+		`,
+		id,
+		displayName,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrProfileNotFound
+	} else if err != nil {
+		return nil, fmt.Errorf("update profile display name: %w", err)
 	}
 
 	return &profile, nil
