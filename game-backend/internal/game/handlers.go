@@ -223,7 +223,7 @@ func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, _, _, err := h.repository.UpdateLockedSession(
+	session, ownerProfileID, isAnonymous, err := h.repository.UpdateLockedSession(
 		r.Context(),
 		chi.URLParam(r, "sessionId"),
 		func(session *Session, ownerProfileID *string, isAnonymous bool) error {
@@ -250,6 +250,13 @@ func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, statusCode, map[string]string{"error": err.Error()})
 		return
+	}
+
+	if session.Status == SessionStatusFinished {
+		if err := h.persistScore(r, session, ownerProfileID, isAnonymous); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create score"})
+			return
+		}
 	}
 
 	writeJSON(w, http.StatusOK, buildSessionResponse(session, now))
