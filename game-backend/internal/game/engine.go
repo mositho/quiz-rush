@@ -161,6 +161,10 @@ func NewSession(config SessionConfig, questionDefinitions []QuestionDefinition, 
 	}
 	shuffelQuestions(sessionQuestions)
 
+	for i := range sessionQuestions {
+		sessionQuestions[i].Position = i
+	}
+
 	currentIndex := 0
 	sessionQuestions[0].ActivatedAt = timePointer(now)
 
