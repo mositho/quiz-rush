@@ -21,19 +21,9 @@
               :ends-at="session.endsAt"
               :duration-seconds="session.durationSeconds"
               :flash-negative="timerFlash"
+              :question-number="displayedQuestion ? displayedQuestion.position + 1 : undefined"
               @expired="handleTimerExpired"
             />
-
-            <div v-if="displayedQuestion" class="game__question-prompt">
-              <div class="game__question-header">
-                <span class="pill">Question {{ displayedQuestion.position + 1 }}</span>
-                <span class="game__question-category">{{
-                  displayedQuestion.categories[0] || "Quiz Rush"
-                }}</span>
-              </div>
-
-              <h2 class="game__question-text">{{ displayedQuestion.text }}</h2>
-            </div>
           </div>
 
           <QuestionCard
@@ -42,7 +32,6 @@
             :disabled="submitting || feedbackLocked"
             :selected-index="selectedAnswerIndex"
             :was-correct="selectedAnswerCorrect"
-            hide-prompt
             @answer-selected="handleAnswer"
           />
 
@@ -356,12 +345,11 @@ function resetFeedback() {
 }
 
 .game__surface {
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .game__sticky-top {
   display: grid;
-  gap: var(--space-3);
   align-self: start;
 }
 
@@ -386,33 +374,6 @@ function resetFeedback() {
   animation: score-pop 600ms ease;
 }
 
-.game__question-prompt {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.game__question-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.game__question-category {
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.game__question-text {
-  margin: 0;
-  width: 100%;
-  font-size: clamp(1.35rem, 2.8vw, 2rem);
-  line-height: 1.15;
-  color: var(--color-heading);
-}
-
 .game__footer-actions {
   display: flex;
   justify-content: center;
@@ -420,7 +381,6 @@ function resetFeedback() {
 
 @media (max-width: 767px) {
   .game__surface {
-    gap: var(--space-2);
     padding: var(--space-4);
     overflow: clip;
   }
@@ -434,9 +394,7 @@ function resetFeedback() {
     margin-inline: calc(var(--space-4) * -1);
     padding: 0 var(--space-4) var(--space-2);
     background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
     border-radius: inherit;
-    box-shadow: 0 10px 20px color-mix(in srgb, var(--color-bg) 70%, transparent);
   }
 
   .game__topbar {
@@ -445,10 +403,6 @@ function resetFeedback() {
 
   .game__score strong {
     line-height: 1;
-  }
-
-  .game__question-prompt {
-    gap: var(--space-2);
   }
 }
 

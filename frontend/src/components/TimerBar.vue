@@ -1,8 +1,11 @@
 <template>
   <div class="timer-bar" :class="timerClasses">
     <div class="timer-bar__meta">
-      <span class="timer-bar__label">Time left</span>
-      <span class="timer-bar__value">{{ formattedTimeLeft }}</span>
+      <span v-if="questionNumber !== undefined" class="pill">Question {{ questionNumber }}</span>
+      <div class="timer-bar__status">
+        <span class="timer-bar__label">Time left</span>
+        <span class="timer-bar__value">{{ formattedTimeLeft }}</span>
+      </div>
     </div>
     <div class="timer-bar__track" aria-hidden="true">
       <div class="timer-bar__fill" :style="{ width: `${progressPercent}%` }"></div>
@@ -17,6 +20,7 @@ const props = defineProps<{
   endsAt: string;
   durationSeconds: number;
   flashNegative?: boolean;
+  questionNumber?: number;
 }>();
 
 const emit = defineEmits<{
@@ -34,6 +38,7 @@ const progressRatio = computed(() => remainingMs.value / durationMs.value);
 const progressPercent = computed(() => Math.max(0, Math.min(100, progressRatio.value * 100)));
 
 const timerClasses = computed(() => ({
+  "timer-bar--caution": progressRatio.value <= 0.5,
   "timer-bar--warning": progressRatio.value <= 0.25,
   "timer-bar--negative": props.flashNegative,
 }));
@@ -91,6 +96,12 @@ onUnmounted(stopTimer);
   gap: var(--space-3);
 }
 
+.timer-bar__status {
+  display: grid;
+  justify-items: end;
+  gap: 0.15rem;
+}
+
 .timer-bar__label {
   color: var(--color-text-muted);
   font-size: 0.92rem;
@@ -118,8 +129,12 @@ onUnmounted(stopTimer);
   background: var(--color-primary);
   transition:
     width 0.9s linear,
-    background var(--transition-fast),
+    background-color 500ms ease,
     transform var(--transition-fast);
+}
+
+.timer-bar--caution .timer-bar__fill {
+  background: var(--color-caution);
 }
 
 .timer-bar--warning .timer-bar__fill {

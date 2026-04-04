@@ -1,11 +1,6 @@
 <template>
   <div class="question-card">
-    <div v-if="!hidePrompt" class="question-card__prompt">
-      <div class="question-card__header">
-        <span class="pill">Question {{ question.position + 1 }}</span>
-        <span class="question-card__category">{{ categoryLabel }}</span>
-      </div>
-
+    <div class="question-card__prompt">
       <h2 class="question-card__question">{{ question.text }}</h2>
     </div>
 
@@ -27,7 +22,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
 import type { Question } from "@/types/apiResponses";
 
 const props = defineProps<{
@@ -35,14 +29,11 @@ const props = defineProps<{
   disabled?: boolean;
   selectedIndex?: number | null;
   wasCorrect?: boolean | null;
-  hidePrompt?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: "answerSelected", index: number): void;
 }>();
-
-const categoryLabel = computed(() => props.question.categories[0] || "Quiz Rush");
 
 function answerIndexLabel(index: number) {
   return String.fromCharCode(65 + index);
@@ -73,23 +64,8 @@ function answerClasses(index: number) {
   gap: var(--space-3);
 }
 
-.question-card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.question-card__category {
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
 .question-card__prompt {
   display: grid;
-  gap: var(--space-3);
 }
 
 .question-card__question {
