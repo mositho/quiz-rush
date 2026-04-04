@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"slices"
 	"time"
 )
@@ -158,6 +159,7 @@ func NewSession(config SessionConfig, questionDefinitions []QuestionDefinition, 
 			CorrectAnswerIndex: questionDefinition.CorrectAnswerIndex,
 		})
 	}
+	shuffelQuestions(sessionQuestions)
 
 	currentIndex := 0
 	sessionQuestions[0].ActivatedAt = timePointer(now)
@@ -396,6 +398,14 @@ func (s *Session) currentQuestionIndexValue() (int, bool) {
 	}
 
 	return *s.CurrentQuestionIndex, true
+}
+
+func shuffelQuestions(questions []SessionQuestion) {
+	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := len(questions) - 1; i > 0; i-- {
+		j := rand.Intn(i + 1)
+		questions[i], questions[j] = questions[j], questions[i]
+	}
 }
 
 func calculateScore(difficulty int, responseTime time.Duration) int {
