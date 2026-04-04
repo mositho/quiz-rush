@@ -1,6 +1,6 @@
 services:
     keycloak-postgres:
-        volumes: !reset
+        volumes:
             - keycloak_postgres_data_dev:/var/lib/postgresql
 
     keycloak:
