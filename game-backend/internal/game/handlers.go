@@ -504,7 +504,7 @@ func (h *Handler) UpdateCurrentUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var request updateCurrentUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if decodeErr := json.NewDecoder(r.Body).Decode(&request); decodeErr != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
