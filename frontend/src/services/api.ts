@@ -1,5 +1,15 @@
-import type { StartSessionRequest } from "@/types/apiRequests";
-import type { Session, SubmitAnswerResult, QuestionSet } from "@/types/apiResponses";
+import type { StartSessionRequest, UpdateCurrentUserRequest } from "@/types/apiRequests";
+import type {
+  LeaderboardList,
+  LinkAccountResult,
+  PublicUser,
+  QuestionSet,
+  ScoreDetail,
+  Session,
+  SubmitAnswerResult,
+  UserScoreList,
+  UserStatsProfile,
+} from "@/types/apiResponses";
 import { getAccessToken, refreshKeycloakToken } from "./keycloak";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -47,7 +57,6 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
   if (!response.ok) {
     const body = await response.text();
-
     throw new ApiError(`API request failed with status ${response.status}`, response.status, body);
   }
 
@@ -90,4 +99,62 @@ export async function submitAnswer(
       body: JSON.stringify({ selectedAnswerIndex: answerIndex }),
     }
   );
+}
+
+export async function finishSession(sessionId: string): Promise<Session> {
+  return apiFetch<Session>(`/game/sessions/${sessionId}/finish`, {
+    method: "POST",
+  });
+}
+
+export async function quitSession(sessionId: string): Promise<Session> {
+  return apiFetch<Session>(`/game/sessions/${sessionId}/quit`, {
+    method: "POST",
+  });
+}
+
+export async function getCurrentUser(): Promise<PublicUser> {
+  return apiFetch<PublicUser>("/game/users/me");
+}
+
+export async function updateCurrentUser(request: UpdateCurrentUserRequest): Promise<PublicUser> {
+  return apiFetch<PublicUser>("/game/users/me", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+}
+
+export async function getUserStats(publicUserId: string): Promise<UserStatsProfile> {
+  return apiFetch<UserStatsProfile>(`/game/users/${publicUserId}/stats`);
+}
+
+export async function getUserScores(publicUserId: string): Promise<UserScoreList> {
+  return apiFetch<UserScoreList>(`/game/users/${publicUserId}/scores`);
+}
+
+export async function getScore(scoreId: string): Promise<ScoreDetail> {
+  return apiFetch<ScoreDetail>(`/game/scores/${scoreId}`);
+}
+
+export async function getLeaderboard(
+  configurationKey?: string,
+  limit = 20
+): Promise<LeaderboardList> {
+  const query = new URLSearchParams();
+  query.set("limit", String(limit));
+
+  if (configurationKey) {
+    query.set("configurationKey", configurationKey);
+  }
+
+  return apiFetch<LeaderboardList>(`/game/leaderboards?${query.toString()}`);
+}
+
+export async function linkAccount(sessionId: string): Promise<LinkAccountResult> {
+  return apiFetch<LinkAccountResult>(`/game/sessions/${sessionId}/link-account`, {
+    method: "POST",
+  });
 }
