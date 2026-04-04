@@ -6,3 +6,7 @@ export interface StartSessionRequest {
 export interface SubmitAnswerRequest {
   selectedAnswerIndex: number;
 }
+
+export interface UpdateCurrentUserRequest {
+  displayName: string;
+}

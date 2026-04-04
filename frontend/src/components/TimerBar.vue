@@ -1,5 +1,5 @@
 <template>
-  <div class="timer-bar" :class="{ 'timer-bar--warning': progressRatio <= 0.25 }">
+  <div class="timer-bar" :class="timerClasses">
     <div class="timer-bar__meta">
       <span class="timer-bar__label">Time left</span>
       <span class="timer-bar__value">{{ formattedTimeLeft }}</span>
@@ -16,17 +16,27 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 const props = defineProps<{
   endsAt: string;
   durationSeconds: number;
+  flashNegative?: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: "expired"): void;
 }>();
 
 const now = ref(Date.now());
+const emittedExpired = ref(false);
 let intervalId: number | null = null;
 
 const endTimeMs = computed(() => new Date(props.endsAt).getTime());
 const durationMs = computed(() => Math.max(props.durationSeconds, 1) * 1000);
-
 const remainingMs = computed(() => Math.max(0, endTimeMs.value - now.value));
 const progressRatio = computed(() => remainingMs.value / durationMs.value);
 const progressPercent = computed(() => Math.max(0, Math.min(100, progressRatio.value * 100)));
+
+const timerClasses = computed(() => ({
+  "timer-bar--warning": progressRatio.value <= 0.25,
+  "timer-bar--negative": props.flashNegative,
+}));
 
 const formattedTimeLeft = computed(() => {
   const totalSeconds = Math.ceil(remainingMs.value / 1000);
@@ -38,6 +48,11 @@ const formattedTimeLeft = computed(() => {
 
 function tick() {
   now.value = Date.now();
+
+  if (remainingMs.value === 0 && !emittedExpired.value) {
+    emittedExpired.value = true;
+    emit("expired");
+  }
 }
 
 function stopTimer() {
@@ -49,10 +64,11 @@ function stopTimer() {
 
 function startTimer() {
   stopTimer();
+  emittedExpired.value = false;
   tick();
 
   if (remainingMs.value > 0) {
-    intervalId = setInterval(tick, 1000);
+    intervalId = window.setInterval(tick, 1000);
   }
 }
 
@@ -65,43 +81,82 @@ onUnmounted(stopTimer);
 <style scoped>
 .timer-bar {
   display: grid;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: var(--space-3);
 }
 
 .timer-bar__meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.95rem;
+  gap: var(--space-3);
 }
 
 .timer-bar__label {
-  color: var(--text);
-  opacity: 0.75;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
 }
 
 .timer-bar__value {
-  font-weight: 700;
-  color: var(--text-h);
+  color: var(--color-heading);
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.timer-bar--negative .timer-bar__value {
+  animation: timer-pop 600ms ease;
 }
 
 .timer-bar__track {
-  height: 0.75rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--text) 12%, transparent);
+  height: 0.95rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-border) 65%, white);
   overflow: hidden;
 }
 
 .timer-bar__fill {
   height: 100%;
-  background: linear-gradient(90deg, #22c55e 0%, #84cc16 100%);
+  background: var(--color-primary);
   transition:
     width 0.9s linear,
-    background 0.2s ease;
+    background var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .timer-bar--warning .timer-bar__fill {
-  background: linear-gradient(90deg, #f97316 0%, #ef4444 100%);
+  background: var(--color-warning);
+}
+
+.timer-bar--negative .timer-bar__fill {
+  animation: timer-shake 500ms ease;
+}
+
+@keyframes timer-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+
+@keyframes timer-pop {
+  0%,
+  100% {
+    transform: scale(1);
+    color: var(--color-heading);
+    background: transparent;
+  }
+  50% {
+    transform: scale(1.04);
+    color: var(--color-danger);
+    background: var(--color-danger-soft);
+  }
 }
 </style>
