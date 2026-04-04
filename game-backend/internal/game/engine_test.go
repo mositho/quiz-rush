@@ -1,6 +1,7 @@
 package game_test
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -23,7 +24,7 @@ func TestNewSessionActivatesFirstQuestion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assertEqual(t, currentQuestion.QuestionID, "q1")
+	assertQuestionIDInSet(t, currentQuestion.QuestionID, "q1", "q2")
 }
 
 func TestSubmitCorrectAnswerAdvancesAndScores(t *testing.T) {
@@ -35,7 +36,15 @@ func TestSubmitCorrectAnswerAdvancesAndScores(t *testing.T) {
 		ConfigurationKey:       "duration=180|sets=lf1",
 	}, testQuestions(), now)
 
-	result, err := session.SubmitAnswer(now.Add(2*time.Second), 1)
+	currentQuestion, err := session.CurrentQuestion(now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := session.SubmitAnswer(
+		now.Add(2*time.Second),
+		correctAnswerIndexForQuestion(t, currentQuestion.QuestionID),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,11 +55,14 @@ func TestSubmitCorrectAnswerAdvancesAndScores(t *testing.T) {
 	}
 	assertEqual(t, session.CurrentScore, result.AwardedPoints)
 	assertEqual(t, session.CorrectQuestions, 1)
-	currentQuestion, err := session.CurrentQuestion(now.Add(2 * time.Second))
+	nextQuestion, err := session.CurrentQuestion(now.Add(2 * time.Second))
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertEqual(t, currentQuestion.QuestionID, "q2")
+	assertQuestionIDInSet(t, nextQuestion.QuestionID, "q1", "q2")
+	if nextQuestion.QuestionID == currentQuestion.QuestionID {
+		t.Fatalf("got same question %s again after correct answer", nextQuestion.QuestionID)
+	}
 }
 
 func TestWrongAnswerDeductsTimeAndAdvancesImmediately(t *testing.T) {
@@ -62,9 +74,17 @@ func TestWrongAnswerDeductsTimeAndAdvancesImmediately(t *testing.T) {
 		ConfigurationKey:       "duration=180|sets=lf1",
 	}, testQuestions(), now)
 
+	currentQuestion, err := session.CurrentQuestion(now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	expectedEndsAt := session.EndsAt.Add(-3 * time.Second)
 
-	result, err := session.SubmitAnswer(now.Add(2*time.Second), 0) // wrong answer (correct is index 1)
+	result, err := session.SubmitAnswer(
+		now.Add(2*time.Second),
+		wrongAnswerIndexForQuestion(t, currentQuestion.QuestionID),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,11 +94,14 @@ func TestWrongAnswerDeductsTimeAndAdvancesImmediately(t *testing.T) {
 	assertEqual(t, session.EndsAt.UTC(), expectedEndsAt.UTC())
 
 	// Next question is immediately available — no cooldown block
-	question, err := session.CurrentQuestion(now.Add(2 * time.Second))
+	nextQuestion, err := session.CurrentQuestion(now.Add(2 * time.Second))
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertEqual(t, question.QuestionID, "q2")
+	assertQuestionIDInSet(t, nextQuestion.QuestionID, "q1", "q2")
+	if nextQuestion.QuestionID == currentQuestion.QuestionID {
+		t.Fatalf("got same question %s again after wrong answer", nextQuestion.QuestionID)
+	}
 }
 
 func TestWrongAnswerWithInsufficientTimeFinishesSession(t *testing.T) {
@@ -91,7 +114,15 @@ func TestWrongAnswerWithInsufficientTimeFinishesSession(t *testing.T) {
 		ConfigurationKey:       "duration=2|sets=lf1",
 	}, testQuestions(), now)
 
-	result, err := session.SubmitAnswer(now.Add(1*time.Second), 0) // wrong answer
+	currentQuestion, err := session.CurrentQuestion(now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := session.SubmitAnswer(
+		now.Add(1*time.Second),
+		wrongAnswerIndexForQuestion(t, currentQuestion.QuestionID),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +144,15 @@ func TestTimerElapsedFinishesSessionAndProducesScoreResult(t *testing.T) {
 		ConfigurationKey:       "duration=5|sets=lf1",
 	}, testQuestions(), now)
 
-	_, err := session.SubmitAnswer(now.Add(2*time.Second), 1)
+	currentQuestion, err := session.CurrentQuestion(now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = session.SubmitAnswer(
+		now.Add(2*time.Second),
+		correctAnswerIndexForQuestion(t, currentQuestion.QuestionID),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,8 +165,9 @@ func TestTimerElapsedFinishesSessionAndProducesScoreResult(t *testing.T) {
 	}
 
 	scoreResult := session.ScoreResult()
-	if scoreResult.Score <= 0 {
-		t.Fatalf("got score %d, want positive value", scoreResult.Score)
+	assertEqual(t, scoreResult.Score, session.CurrentScore)
+	if scoreResult.CorrectQuestions != session.CorrectQuestions {
+		t.Fatalf("got correct questions %d, want %d", scoreResult.CorrectQuestions, session.CorrectQuestions)
 	}
 	assertEqual(t, scoreResult.AnsweredQuestions, 1)
 	assertEqual(t, len(scoreResult.QuestionResults), len(testQuestions()))
@@ -172,5 +212,43 @@ func assertEqual[T comparable](t *testing.T, got, want T) {
 
 	if got != want {
 		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func assertQuestionIDInSet(t *testing.T, got string, want ...string) {
+	t.Helper()
+
+	if slices.Contains(want, got) {
+		return
+	}
+
+	t.Fatalf("got question %s, want one of %v", got, want)
+}
+
+func correctAnswerIndexForQuestion(t *testing.T, questionID string) int {
+	t.Helper()
+
+	switch questionID {
+	case "q1":
+		return 1
+	case "q2":
+		return 2
+	default:
+		t.Fatalf("unexpected question id %s", questionID)
+		return -1
+	}
+}
+
+func wrongAnswerIndexForQuestion(t *testing.T, questionID string) int {
+	t.Helper()
+
+	switch questionID {
+	case "q1":
+		return 0
+	case "q2":
+		return 0
+	default:
+		t.Fatalf("unexpected question id %s", questionID)
+		return -1
 	}
 }
