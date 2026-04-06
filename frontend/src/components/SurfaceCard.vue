@@ -1,14 +1,8 @@
 <template>
-  <section class="surface-card" :class="{ 'surface-card--accented': accented }">
+  <section class="surface-card">
     <slot />
   </section>
 </template>
-
-<script setup lang="ts">
-defineProps<{
-  accented?: boolean;
-}>();
-</script>
 
 <style scoped>
 .surface-card {

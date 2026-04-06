@@ -462,12 +462,6 @@ function scrollToEntry(scoreId: string) {
   min-width: 14rem;
 }
 
-.leaderboard__filter-current {
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
 .leaderboard__filter-option {
   padding: 0.55rem 0.7rem;
   border-radius: var(--radius-md);

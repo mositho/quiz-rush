@@ -16,7 +16,11 @@
           </button>
         </div>
 
-        <RouterLink class="app-shell__home-link app-shell__home-link--center" to="/">
+        <RouterLink
+          class="app-shell__home-link app-shell__home-link--center"
+          to="/"
+          @click="menuOpen = false"
+        >
           <span class="app-shell__logo" aria-hidden="true"></span>
           <span class="app-shell__title">Quiz Rush</span>
         </RouterLink>
@@ -78,14 +82,14 @@
             class="button button--primary button--compact app-shell__active-banner-button"
             :to="`/game/${activeSessionId}`"
           >
-            Rejoin session
+            Rejoin
           </RouterLink>
           <button
             class="button button--danger button--compact app-shell__active-banner-button"
             type="button"
             @click="handleAbandonSession"
           >
-            Abandon session
+            Abandon
           </button>
         </div>
       </div>
@@ -116,7 +120,7 @@
       </nav>
 
       <div v-if="isSignedIn && currentUser" class="app-shell__drawer-profile">
-        <span class="stacked-label__title">Display name</span>
+        <span class="stacked-label__title">{{ DISPLAY_NAME_LABEL }}</span>
         <div class="app-shell__drawer-profile-row">
           <input
             v-model="displayNameDraft"
@@ -129,7 +133,7 @@
           <button
             class="button button--secondary button--compact"
             type="button"
-            :disabled="currentUserSaving || !displayNameChanged"
+            :disabled="displayNameSubmitting || !displayNameChanged"
             @click="handleUpdateDisplayName"
           >
             Update
@@ -150,7 +154,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
-import { ApiError } from "@/services/api";
+import { DISPLAY_NAME_LABEL, useDisplayNameForm } from "@/composables/useDisplayNameForm";
 import { refreshCurrentUser, useCurrentUser } from "@/composables/useCurrentUser";
 import { refreshTrackedActiveSession, useActiveSessionTracker } from "@/composables/useGameSession";
 import { logoutFromKeycloak, loginWithKeycloak } from "@/services/keycloak";
@@ -160,20 +164,11 @@ const accountMenuOpen = ref(false);
 const accountMenuRef = ref<HTMLElement | null>(null);
 const route = useRoute();
 const router = useRouter();
-const {
-  authState,
-  currentUser,
-  currentUserLoading,
-  currentUserReady,
-  currentUserSaving,
-  isSignedIn,
-  saveDisplayName,
-} = useCurrentUser();
+const { authState, currentUser, currentUserLoading, currentUserReady, isSignedIn } =
+  useCurrentUser();
 const { activeSessionId, activeSession, pendingSessionNavigationId, abandonTrackedSession } =
   useActiveSessionTracker();
 let pollIntervalId: number | null = null;
-const displayNameDraft = ref("");
-const displayNameError = ref<string | null>(null);
 const activeTimerNow = ref(Date.now());
 let activeTimerIntervalId: number | null = null;
 
@@ -202,11 +197,15 @@ const navigationItems = computed(() => {
   return items;
 });
 
-const displayNameChanged = computed(() => {
-  const currentDisplayName = currentUser.value?.displayName ?? "";
-  return (
-    displayNameDraft.value.trim() !== "" && displayNameDraft.value.trim() !== currentDisplayName
-  );
+const currentDisplayName = computed(() => currentUser.value?.displayName ?? "");
+const {
+  displayNameDraft,
+  displayNameChanged,
+  displayNameError,
+  submitDisplayName: handleUpdateDisplayName,
+  displayNameSubmitting,
+} = useDisplayNameForm({
+  currentDisplayName,
 });
 
 const activeSessionTimerLabel = computed(() => {
@@ -262,14 +261,6 @@ watch(activeSessionId, () => {
   syncActiveTimer();
 });
 
-watch(
-  currentUser,
-  (nextUser) => {
-    displayNameDraft.value = nextUser?.displayName ?? "";
-  },
-  { immediate: true }
-);
-
 async function handleLogin() {
   accountMenuOpen.value = false;
   await loginWithKeycloak(route.fullPath);
@@ -284,31 +275,6 @@ async function handleLogout() {
 
   await logoutFromKeycloak();
   await refreshCurrentUser();
-}
-
-async function handleUpdateDisplayName() {
-  const nextDisplayName = displayNameDraft.value.trim();
-  if (!nextDisplayName) {
-    displayNameError.value = "Display name cannot be empty.";
-    return;
-  }
-
-  try {
-    await saveDisplayName(nextDisplayName);
-    displayNameError.value = null;
-  } catch (saveError) {
-    if (saveError instanceof ApiError) {
-      try {
-        const payload = JSON.parse(saveError.body) as { error?: string };
-        displayNameError.value = payload.error || "Could not update display name right now.";
-      } catch {
-        displayNameError.value = "Could not update display name right now.";
-      }
-      return;
-    }
-
-    displayNameError.value = "Could not update display name right now.";
-  }
 }
 
 async function handleAbandonSession() {
@@ -538,7 +504,7 @@ onUnmounted(() => {
 
 .app-shell__active-banner-inner {
   width: 100%;
-  max-width: 40rem;
+  max-width: 38rem;
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -566,7 +532,7 @@ onUnmounted(() => {
 }
 
 .app-shell__active-banner-button {
-  min-width: 9.75rem;
+  min-width: 6rem;
 }
 
 .app-shell__active-banner-timer {
@@ -597,7 +563,7 @@ onUnmounted(() => {
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   box-shadow: var(--shadow-float);
-  transform: translateX(-104%);
+  transform: translateX(-100%);
   transition: transform var(--transition-medium);
 }
 
@@ -664,41 +630,32 @@ onUnmounted(() => {
     gap: var(--space-2);
   }
 
-  .app-shell__title {
-    font-size: 1rem;
-  }
-
-  .app-shell__user {
-    flex-wrap: wrap;
-    justify-content: end;
+  .app-shell__header-inner {
+    gap: var(--space-2);
   }
 
   .app-shell__edit-input {
     min-width: 8rem;
   }
 
-  .app-shell__active-banner-inner {
-    display: grid;
-    justify-items: center;
-    text-align: center;
-  }
-
   .app-shell__active-banner-info {
-    justify-content: center;
+    justify-content: start;
     gap: var(--space-2);
   }
 
   .app-shell__active-banner-actions {
-    justify-content: center;
+    justify-content: start;
   }
 
   .app-shell__active-banner-timer {
-    justify-self: auto;
+    justify-self: start;
   }
 }
 
-:deep(.page) {
-  padding-top: calc(var(--header-height) + var(--space-6));
+@media (max-width: 500px) {
+  .app-shell__active-banner-inner {
+    flex-direction: column;
+  }
 }
 
 .app-shell--with-active-banner :deep(.page) {

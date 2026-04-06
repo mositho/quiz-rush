@@ -153,10 +153,4 @@ async function handleStart() {
     align-items: stretch;
   }
 }
-
-@media (min-width: 768px) {
-  .home__layout {
-    grid-template-columns: 1fr;
-  }
-}
 </style>
