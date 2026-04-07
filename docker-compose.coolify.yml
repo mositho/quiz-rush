@@ -43,7 +43,7 @@ services:
 
     keycloak:
         image: quay.io/keycloak/keycloak:26.2
-        command: ["start", "--import-realm --optimized"]
+        command: ["start", "--import-realm", "--optimized"]
         restart: on-failure:5
         healthcheck:
             test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/account/realms/quiz-rush/.well-known/openid-configuration"]
