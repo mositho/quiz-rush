@@ -47,10 +47,16 @@ jobs:
 
     game_backend:
         name: Game Backend Checks
+        permissions:
+            contents: read
+            pull-requests: write
         uses: ./.github/workflows/game-backend-ci.yml
         secrets: inherit
 
     questions_backend:
         name: Questions Backend Checks
+        permissions:
+            contents: read
+            pull-requests: write
         uses: ./.github/workflows/questions-backend-ci.yml
         secrets: inherit
