@@ -6,7 +6,6 @@
     "moduleResolution": "bundler",
     "types": ["vite/client"],
     "lib": ["ES2020", "DOM"],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
