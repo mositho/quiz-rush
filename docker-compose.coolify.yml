@@ -1,51 +1,94 @@
+x-postgres-common: &postgres-common
+    image: postgres:18-alpine
+    healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+        interval: 5s
+        timeout: 5s
+        retries: 10
+
 services:
     game-postgres:
+        <<: *postgres-common
         restart: on-failure:5
         environment:
+            POSTGRES_DB: quiz_rush_game
+            POSTGRES_USER: quiz_rush_game
             POSTGRES_PASSWORD: ${GAME_POSTGRES_PASSWORD:?GAME_POSTGRES_PASSWORD is required}
+        volumes:
+            - game_postgres_data:/var/lib/postgresql
 
     keycloak-postgres:
+        <<: *postgres-common
         restart: on-failure:5
         environment:
+            POSTGRES_DB: keycloak
+            POSTGRES_USER: keycloak
             POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+        volumes:
+            - keycloak_postgres_data:/var/lib/postgresql
 
     questions-backend:
         image: ${QUESTIONS_BACKEND_IMAGE:-ghcr.io/mositho/quiz-rush-questions-backend}:${IMAGE_TAG:-latest}
         pull_policy: always
-        working_dir: /app
-        command: ["/app/questions-server"]
-        volumes: !reset []
-        ports: !reset []
         restart: on-failure:5
         environment:
+            PORT: "${QUESTIONS_BACKEND_PORT:-8080}"
             CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:?CORS_ALLOWED_ORIGIN is required}
 
     keycloak:
+        image: quay.io/keycloak/keycloak:26.2
         command: ["start", "--import-realm"]
         restart: on-failure:5
         environment:
+            KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
             KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+            KC_DB: postgres
+            KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
+            KC_DB_USERNAME: keycloak
             KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+            KC_HTTP_ENABLED: "true"
+            KC_HTTP_RELATIVE_PATH: /account
             KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:?KEYCLOAK_HOSTNAME is required}
             KC_HOSTNAME_STRICT: "true"
+            KC_PROXY_HEADERS: xforwarded
+        volumes:
+            - ${KEYCLOAK_IMPORT_FILE:-./keycloak/realm-export.prod.json}:/opt/keycloak/data/import/realm-export.json:ro
+        depends_on:
+            keycloak-postgres:
+                condition: service_healthy
 
     game-backend:
         image: ${GAME_BACKEND_IMAGE:-ghcr.io/mositho/quiz-rush-game-backend}:${IMAGE_TAG:-latest}
         pull_policy: always
-        working_dir: /app
-        command: ["/app/game-server"]
-        volumes: !reset []
-        ports: !reset []
         restart: on-failure:5
         environment:
+            DATABASE_URL: postgres://quiz_rush_game:${GAME_POSTGRES_PASSWORD:?GAME_POSTGRES_PASSWORD is required}@game-postgres:5432/quiz_rush_game?sslmode=disable
+            PORT: "${GAME_BACKEND_PORT:-8080}"
             CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:?CORS_ALLOWED_ORIGIN is required}
+            QUESTIONS_API_BASE_URL: ${QUESTIONS_API_BASE_URL:-http://questions-backend:8080}
             KEYCLOAK_ISSUER_URL: ${KEYCLOAK_ISSUER_URL:?KEYCLOAK_ISSUER_URL is required}
             KEYCLOAK_INTERNAL_ISSUER_URL: ${KEYCLOAK_INTERNAL_ISSUER_URL:-http://keycloak:8080/account/realms/quiz-rush}
+            KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-quiz-rush-app}
             AUTH_INIT_MAX_WAIT: ${AUTH_INIT_MAX_WAIT:-180s}
             AUTH_INIT_RETRY_INTERVAL: ${AUTH_INIT_RETRY_INTERVAL:-5s}
+        depends_on:
+            game-postgres:
+                condition: service_healthy
+            questions-backend:
+                condition: service_started
+            keycloak:
+                condition: service_started
 
     frontend:
         image: ${FRONTEND_IMAGE:-ghcr.io/mositho/quiz-rush-frontend}:${IMAGE_TAG:-latest}
         pull_policy: always
-        ports: !reset []
         restart: on-failure:5
+        depends_on:
+            game-backend:
+                condition: service_started
+            keycloak:
+                condition: service_started
+
+volumes:
+    game_postgres_data:
+    keycloak_postgres_data:
