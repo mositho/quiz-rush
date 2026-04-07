@@ -66,8 +66,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
 import GameResultCard from "@/components/GameResultCard.vue";
 import QuestionCard from "@/components/QuestionCard.vue";
 import SurfaceCard from "@/components/SurfaceCard.vue";
@@ -78,8 +76,12 @@ import { getLeaderboard, getQuestionSets, getUserScores, linkAccount } from "@/s
 import { loginWithKeycloak } from "@/services/keycloak";
 import type { LeaderboardEntry, Question, QuestionSet, ScoreSummary } from "@/types/apiResponses";
 import { LEADERBOARD_LIMIT, buildConfigurationKey } from "@/utils/gameConfig";
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 
 const PENDING_LINK_SESSION_KEY = "quiz-rush.pending-link-session-id";
+const TIMER_EXPIRY_SYNC_ATTEMPTS = 3;
+const TIMER_EXPIRY_RETRY_DELAY_MS = 1000;
 
 const route = useRoute();
 const {
@@ -289,7 +291,19 @@ async function handleTimerExpired() {
 
   timerExpiredSyncing.value = true;
   try {
-    await loadSession(session.value.sessionId);
+    const expiredSessionId = session.value.sessionId;
+
+    for (let attempt = 0; attempt < TIMER_EXPIRY_SYNC_ATTEMPTS; attempt += 1) {
+      const refreshedSession = await loadSession(expiredSessionId);
+
+      if (!refreshedSession || refreshedSession.status === "finished") {
+        return;
+      }
+
+      if (attempt < TIMER_EXPIRY_SYNC_ATTEMPTS - 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, TIMER_EXPIRY_RETRY_DELAY_MS));
+      }
+    }
   } finally {
     timerExpiredSyncing.value = false;
   }
