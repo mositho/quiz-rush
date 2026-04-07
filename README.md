@@ -86,6 +86,74 @@ classDiagram
   SessionRepository --> Postgres : sessions and scores
 ```
 
+## CI Pipeline
+
+The GitHub Actions pipeline has two linked workflows:
+
+- `ci.yml` runs checks on pushes and pull requests for the app, backend, compose, and workflow files.
+- `build-image.yml` runs only after a successful `CI` workflow on a `main` branch push, then builds and pushes Docker images and triggers a Coolify redeploy webhook.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Dev as Developer
+  participant GH as GitHub
+  participant CI as CI workflow
+  participant Build as Build workflow
+  participant Scan as Secret Scanning
+  participant FE as Frontend
+  participant GB as Game Backend
+  participant QB as Questions Backend
+  participant GO as Reusable Go workflow
+  participant Reg as Container Registry
+  participant PR as Pull Request
+  participant Coolify as Coolify
+
+  Dev->>GH: Push or open/update PR<br/>for frontend, backend, compose, or workflow files
+  GH->>CI: Trigger top-level CI workflow
+  Note over CI: Concurrency group cancels older runs<br/>for the same PR/ref
+
+  par Secret scan
+    CI->>Scan: Run gitleaks scan
+    Scan-->>CI: Scan result
+  and Frontend checks
+    CI->>FE: Run frontend checks
+    FE->>FE: Install, audit, lint, format check, build
+    FE-->>CI: Frontend result
+  and Game backend checks
+    CI->>GB: Start game backend workflow
+    GB->>GO: Reuse Go backend pipeline
+    GO->>GO: Format, lint, vuln check, tests, coverage
+    alt Pull request
+      GO->>PR: Update coverage comment
+    end
+    GO-->>GB: Game backend result
+    GB-->>CI: Backend result
+  and Questions backend checks
+    CI->>QB: Start questions backend workflow
+    QB->>GO: Reuse Go backend pipeline
+    GO->>GO: Format, lint, vuln check, tests, coverage
+    alt Pull request
+      GO->>PR: Update coverage comment
+    end
+    GO-->>QB: Questions backend result
+    QB-->>CI: Backend result
+  end
+
+  CI-->>GH: Combined CI status
+  GH-->>Dev: CI result on commit or PR
+
+  alt Successful push to main
+    GH->>Build: Trigger via workflow_run after CI completes
+    Note over Build: Runs only if CI concluded successfully<br/>and the original event was a push
+    Build->>Build: Checkout commit and prepare Docker build
+    Build->>Reg: Build and push frontend and backend images
+    Build->>Reg: Tag and push latest images
+    Build->>Coolify: POST deploy webhook
+    Note over Coolify: Redeploy starts on the server
+  end
+```
+
 ## Environment setup
 
 The project is Docker-first. In the normal development flow, you do not need per-service `.env` files.
