@@ -9,7 +9,7 @@ function createKeycloakInstance() {
   });
 }
 
-let keycloak = createKeycloakInstance();
+const keycloak = createKeycloakInstance();
 
 export const authState = reactive({
   initialized: false,
