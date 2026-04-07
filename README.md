@@ -86,7 +86,7 @@ classDiagram
   SessionRepository --> Postgres : sessions and scores
 ```
 
-## CI Pipeline
+## Pipeline
 
 The GitHub Actions pipeline has two linked workflows:
 
