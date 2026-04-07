@@ -46,11 +46,17 @@ services:
         command: ["start", "--import-realm"]
         restart: on-failure:5
         healthcheck:
-            test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/account/realms/quiz-rush/.well-known/openid-configuration"]
+            test:
+                [
+                    "CMD",
+                    "bash",
+                    "-lc",
+                    "{ printf 'HEAD /account/health/ready HTTP/1.0\\r\\n\\r\\n' >&0; grep 'HTTP/1.0 200'; } 0<>/dev/tcp/localhost/9000",
+                ]
             interval: 10s
             timeout: 5s
             retries: 50
-            start_period: 60s
+            start_period: 10s
         environment:
             KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
             KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
@@ -62,6 +68,7 @@ services:
             KC_HTTP_RELATIVE_PATH: /account
             KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:?KEYCLOAK_HOSTNAME is required}
             KC_HOSTNAME_STRICT: "true"
+            KC_HEALTH_ENABLED: "true"
             KC_PROXY_HEADERS: xforwarded
         volumes:
             - ${KEYCLOAK_IMPORT_FILE:-./keycloak/realm-export.prod.json}:/opt/keycloak/data/import/realm-export.json:ro
