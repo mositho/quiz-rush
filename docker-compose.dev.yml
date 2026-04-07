@@ -1,18 +1,40 @@
 services:
+    game-postgres:
+        ports:
+            - "${GAME_POSTGRES_HOST_PORT:-5433}:5432"
+
+    questions-backend:
+        image: golang:1.25.8
+        working_dir: /app
+        volumes:
+            - ./questions-backend:/app
+        command: go run ./cmd/server
+        ports:
+            - "${QUESTIONS_BACKEND_HOST_PORT:-8081}:${QUESTIONS_BACKEND_PORT:-8080}"
+
     keycloak-postgres:
         volumes:
             - keycloak_postgres_data_dev:/var/lib/postgresql
 
     keycloak:
+        command: ["start-dev", "--import-realm"]
         environment:
             KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-http://localhost:8082/account}
         ports:
             - "${KEYCLOAK_HOST_PORT:-8082}:8080"
 
     game-backend:
+        image: golang:1.25.8
+        restart: on-failure
+        working_dir: /app
+        volumes:
+            - ./game-backend:/app
+        command: go run ./cmd/server
         environment:
             CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-http://localhost:5173}
             KEYCLOAK_ISSUER_URL: ${KEYCLOAK_ISSUER_URL:-http://localhost:8082/account/realms/quiz-rush}
+        ports:
+            - "${GAME_BACKEND_HOST_PORT:-8080}:${GAME_BACKEND_PORT:-8080}"
 
     frontend:
         container_name: quiz-rush-frontend-dev

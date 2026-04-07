@@ -1,8 +1,7 @@
 # Quiz Rush
 
-[![Frontend](https://github.com/mositho/quiz-rush/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/mositho/quiz-rush/actions/workflows/frontend-ci.yml)
-[![Game Backend](https://github.com/mositho/quiz-rush/actions/workflows/game-backend-ci.yml/badge.svg?branch=main)](https://github.com/mositho/quiz-rush/actions/workflows/game-backend-ci.yml)
-[![Questions Backend](https://github.com/mositho/quiz-rush/actions/workflows/questions-backend-ci.yml/badge.svg?branch=main)](https://github.com/mositho/quiz-rush/actions/workflows/questions-backend-ci.yml)
+[![CI](https://github.com/mositho/quiz-rush/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mositho/quiz-rush/actions/workflows/ci.yml)
+[![Build And Deploy Images](https://github.com/mositho/quiz-rush/actions/workflows/build-image.yml/badge.svg?branch=main)](https://github.com/mositho/quiz-rush/actions/workflows/build-image.yml)
 
 [Miro](https://miro.com/app/board/uXjVGt7dlRA=/?focusWidget=3458764665738994468)
 
@@ -120,6 +119,17 @@ make setup
 
 ### Recommended development workflow
 
+Compose files are split by concern:
+
+- `docker-compose.yml`
+  Unopinionated base definitions with shared service wiring, environment defaults, volumes, and dependencies.
+- `docker-compose.dev.yml`
+  Local development runtime overrides with bind mounts, host ports, and HMR.
+- `docker-compose.build.yml`
+  Image build definitions used by CI to build and push application images.
+- `docker-compose.coolify.yml`
+  Coolify/production runtime overrides that pull prebuilt images from the registry.
+
 Use Docker Compose with the dev override:
 
 ```sh
@@ -142,13 +152,7 @@ Then open:
 
 Create a root `.env` only if you want to override Docker Compose defaults locally.
 
-### Running with Docker Compose
-
-Start everything with:
-
-```sh
-docker compose up --build
-```
+The base file on its own is intentionally incomplete for the application services. Combine it with one of the environment-specific overrides above.
 
 ### Development compose override (Vue HMR)
 
@@ -176,23 +180,24 @@ Notes:
 - Dev override uses a dedicated Keycloak Postgres volume to avoid stale realm config from other compose profiles.
 - If an older dev Keycloak volume exists, recreate it once: `docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v keycloak keycloak-postgres`.
 
-### Production compose override
+### Coolify compose override
 
-The production setup uses a second compose file that overrides local development defaults.
+The Coolify setup uses a dedicated runtime override that pulls the prebuilt application images from the registry.
 
 Use this command order so production settings win:
 
 ```sh
-docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.coolify.yml up -d
 ```
 
-Production-specific behavior in the override:
+Coolify-specific behavior in the override:
 
 - No service publishes host ports
 - Keycloak runs in production mode with `start --import-realm`
 - Required secrets and URLs fail fast when missing
 - Keycloak imports the file selected by `KEYCLOAK_IMPORT_FILE`
-- `game-backend` and `questions-backend` are built as container images (no source-code bind mount required)
+- `frontend`, `game-backend` and `questions-backend` are pulled from the container registry
+- All app services can be pinned to one release via `IMAGE_TAG` (for example the Git commit SHA)
 - Restart policy is bounded (`on-failure:5`) to prevent endless crash loops during debugging
 - `game-backend` retries OIDC startup to wait for Keycloak readiness
 
@@ -205,17 +210,29 @@ Minimum required variables in `.env.prod`:
 - `KEYCLOAK_IMPORT_FILE=./keycloak/realm-export.prod.json`
 - `KEYCLOAK_ISSUER_URL`
 - `CORS_ALLOWED_ORIGIN`
-- `VITE_KEYCLOAK_URL`
 - `AUTH_INIT_MAX_WAIT=180s`
 - `AUTH_INIT_RETRY_INTERVAL=5s`
+
+Optional image variables in `.env.prod`:
+
+- `IMAGE_TAG=latest`
+- `FRONTEND_IMAGE=ghcr.io/mositho/quiz-rush-frontend`
+- `GAME_BACKEND_IMAGE=ghcr.io/mositho/quiz-rush-game-backend`
+- `QUESTIONS_BACKEND_IMAGE=ghcr.io/mositho/quiz-rush-questions-backend`
+
+Build images in CI with the dedicated build override:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.build.yml build frontend game-backend questions-backend
+```
 
 Update `keycloak/realm-export.prod.json` with your real frontend domain before deployment.
 
 If you changed Postgres usernames/database names and see errors like `FATAL: role ... does not exist`, recreate the database volumes once:
 
 ```sh
-docker compose down -v
-docker compose up --build
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.coolify.yml down -v
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.coolify.yml up -d
 ```
 
 Important details:
@@ -230,9 +247,9 @@ Important details:
 
 Quick checks after startup:
 
-- Frontend: `http://localhost`
-- API health: `http://localhost/health`
-- Keycloak discovery: `http://localhost/account/realms/quiz-rush/.well-known/openid-configuration`
+- Frontend: `https://your-public-domain`
+- API health: `https://your-public-domain/health`
+- Keycloak discovery: `https://your-public-domain/account/realms/quiz-rush/.well-known/openid-configuration`
 
 ### Keycloak defaults
 
@@ -247,8 +264,8 @@ Docker Compose starts Keycloak under `/account` with preconfigured defaults so t
 If you change `keycloak/realm-export.json`, recreate Keycloak data so import is applied again:
 
 ```sh
-docker compose down -v
-docker compose up --build
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 For local development, Docker Compose provides fallback defaults for these sensitive values:
@@ -296,7 +313,6 @@ VITE_KEYCLOAK_CLIENT_ID=quiz-rush-app
 ```
 
 ## Bruno API Collections
-
 
 - [bruno/game-backend](/home/moritz/workspace/school/quiz-rush/bruno/game-backend)
   Anonymous smoke flow for the game API through the public Docker entrypoint.

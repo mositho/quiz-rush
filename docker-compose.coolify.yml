@@ -1,6 +1,5 @@
 services:
     game-postgres:
-        ports: !reset []
         restart: on-failure:5
         environment:
             POSTGRES_PASSWORD: ${GAME_POSTGRES_PASSWORD:?GAME_POSTGRES_PASSWORD is required}
@@ -11,10 +10,8 @@ services:
             POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
 
     questions-backend:
-        image: quiz-rush-questions-backend:prod
-        build:
-            context: ./questions-backend
-            dockerfile: Dockerfile
+        image: ${QUESTIONS_BACKEND_IMAGE:-ghcr.io/mositho/quiz-rush-questions-backend}:${IMAGE_TAG:-latest}
+        pull_policy: always
         working_dir: /app
         command: ["/app/questions-server"]
         volumes: !reset []
@@ -33,10 +30,8 @@ services:
             KC_HOSTNAME_STRICT: "true"
 
     game-backend:
-        image: quiz-rush-game-backend:prod
-        build:
-            context: ./game-backend
-            dockerfile: Dockerfile
+        image: ${GAME_BACKEND_IMAGE:-ghcr.io/mositho/quiz-rush-game-backend}:${IMAGE_TAG:-latest}
+        pull_policy: always
         working_dir: /app
         command: ["/app/game-server"]
         volumes: !reset []
@@ -50,11 +45,7 @@ services:
             AUTH_INIT_RETRY_INTERVAL: ${AUTH_INIT_RETRY_INTERVAL:-5s}
 
     frontend:
+        image: ${FRONTEND_IMAGE:-ghcr.io/mositho/quiz-rush-frontend}:${IMAGE_TAG:-latest}
+        pull_policy: always
         ports: !reset []
         restart: on-failure:5
-        build:
-            args:
-                VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
-                VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:?VITE_KEYCLOAK_URL is required}
-                VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-quiz-rush}
-                VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-quiz-rush-app}

@@ -1,34 +1,26 @@
 name: Questions Backend
 
 on:
-  push:
-    paths:
-      - "questions-backend/**"
-      - ".github/workflows/questions-backend-ci.yml"
-      - ".github/workflows/go-backend-reusable.yml"
-  pull_request:
-    paths:
-      - "questions-backend/**"
-      - ".github/workflows/questions-backend-ci.yml"
-      - ".github/workflows/go-backend-reusable.yml"
+    workflow_call:
+    workflow_dispatch:
 
 permissions:
-  contents: read
+    contents: read
 
 concurrency:
-  group: questions-backend-ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+    group: questions-backend-ci-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  questions_backend:
-    name: Go Backend Checks (Questions Backend)
-    uses: ./.github/workflows/go-backend-reusable.yml
-    permissions:
-      contents: read
-      pull-requests: write
-    with:
-      backend_name: Questions Backend
-      backend_path: questions-backend
-      coverage_title: Questions Backend
-      coverage_marker: questions-backend-coverage
-    secrets: inherit
+    questions_backend:
+        name: Go Backend Checks (Questions Backend)
+        uses: ./.github/workflows/go-backend-reusable.yml
+        permissions:
+            contents: read
+            pull-requests: write
+        with:
+            backend_name: Questions Backend
+            backend_path: questions-backend
+            coverage_title: Questions Backend
+            coverage_marker: questions-backend-coverage
+        secrets: inherit

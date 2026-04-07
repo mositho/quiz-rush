@@ -1,34 +1,26 @@
 name: Game Backend
 
 on:
-  push:
-    paths:
-      - "game-backend/**"
-      - ".github/workflows/game-backend-ci.yml"
-      - ".github/workflows/go-backend-reusable.yml"
-  pull_request:
-    paths:
-      - "game-backend/**"
-      - ".github/workflows/game-backend-ci.yml"
-      - ".github/workflows/go-backend-reusable.yml"
+    workflow_call:
+    workflow_dispatch:
 
 permissions:
-  contents: read
+    contents: read
 
 concurrency:
-  group: game-backend-ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+    group: game-backend-ci-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  game_backend:
-    name: Go Backend Checks (Game Backend)
-    uses: ./.github/workflows/go-backend-reusable.yml
-    permissions:
-      contents: read
-      pull-requests: write
-    with:
-      backend_name: Game Backend
-      backend_path: game-backend
-      coverage_title: Game Backend
-      coverage_marker: game-backend-coverage
-    secrets: inherit
+    game_backend:
+        name: Go Backend Checks (Game Backend)
+        uses: ./.github/workflows/go-backend-reusable.yml
+        permissions:
+            contents: read
+            pull-requests: write
+        with:
+            backend_name: Game Backend
+            backend_path: game-backend
+            coverage_title: Game Backend
+            coverage_marker: game-backend-coverage
+        secrets: inherit

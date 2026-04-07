@@ -1,0 +1,120 @@
+name: Build And Deploy Images
+
+on:
+    workflow_run:
+        workflows:
+            - CI
+        types:
+            - completed
+        branches:
+            - main
+
+permissions:
+    contents: read
+    packages: write
+
+concurrency:
+    group: build-image-${{ github.event.workflow_run.head_sha }}
+    cancel-in-progress: true
+
+jobs:
+    build_and_push:
+        name: Build And Push Docker Images
+        if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+        runs-on: ubuntu-latest
+        env:
+            REGISTRY: ${{ vars.DOCKER_REGISTRY || 'ghcr.io' }}
+        steps:
+            - name: Checkout commit
+              uses: actions/checkout@v6
+              with:
+                  ref: ${{ github.event.workflow_run.head_sha }}
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Log in to registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ secrets.DOCKER_REGISTRY_USERNAME || github.actor }}
+                  password: ${{ secrets.DOCKER_REGISTRY_PASSWORD || secrets.GITHUB_TOKEN }}
+
+            - name: Define image names
+              id: image_meta
+              run: |
+                  set -euo pipefail
+                  owner_lc="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+                  repo_lc="$(echo "${GITHUB_REPOSITORY#*/}" | tr '[:upper:]' '[:lower:]')"
+                  prefix="${REGISTRY}/${owner_lc}/${repo_lc}"
+                  tag="${GITHUB_SHA}"
+
+                  echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+                  echo "frontend_image=${prefix}-frontend" >> "$GITHUB_OUTPUT"
+                  echo "game_backend_image=${prefix}-game-backend" >> "$GITHUB_OUTPUT"
+                  echo "questions_backend_image=${prefix}-questions-backend" >> "$GITHUB_OUTPUT"
+
+            - name: Build images with docker compose
+              env:
+                  IMAGE_TAG: ${{ steps.image_meta.outputs.tag }}
+                  FRONTEND_IMAGE: ${{ steps.image_meta.outputs.frontend_image }}
+                  GAME_BACKEND_IMAGE: ${{ steps.image_meta.outputs.game_backend_image }}
+                  QUESTIONS_BACKEND_IMAGE: ${{ steps.image_meta.outputs.questions_backend_image }}
+                  VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || '/api' }}
+                  VITE_KEYCLOAK_URL: ${{ vars.VITE_KEYCLOAK_URL || 'http://localhost/account' }}
+                  VITE_KEYCLOAK_REALM: ${{ vars.VITE_KEYCLOAK_REALM || 'quiz-rush' }}
+                  VITE_KEYCLOAK_CLIENT_ID: ${{ vars.VITE_KEYCLOAK_CLIENT_ID || 'quiz-rush-app' }}
+              run: |
+                  set -euo pipefail
+                  docker compose -f docker-compose.yml -f docker-compose.build.yml build frontend game-backend questions-backend
+
+            - name: Push sha-tagged images
+              env:
+                  IMAGE_TAG: ${{ steps.image_meta.outputs.tag }}
+                  FRONTEND_IMAGE: ${{ steps.image_meta.outputs.frontend_image }}
+                  GAME_BACKEND_IMAGE: ${{ steps.image_meta.outputs.game_backend_image }}
+                  QUESTIONS_BACKEND_IMAGE: ${{ steps.image_meta.outputs.questions_backend_image }}
+              run: |
+                  set -euo pipefail
+                  docker compose -f docker-compose.yml -f docker-compose.build.yml push frontend game-backend questions-backend
+
+            - name: Tag images as latest
+              env:
+                  IMAGE_TAG: ${{ steps.image_meta.outputs.tag }}
+                  FRONTEND_IMAGE: ${{ steps.image_meta.outputs.frontend_image }}
+                  GAME_BACKEND_IMAGE: ${{ steps.image_meta.outputs.game_backend_image }}
+                  QUESTIONS_BACKEND_IMAGE: ${{ steps.image_meta.outputs.questions_backend_image }}
+              run: |
+                  set -euo pipefail
+
+                  frontend_id="$(docker image inspect "${FRONTEND_IMAGE}:${IMAGE_TAG}" --format '{{.Id}}')"
+                  game_backend_id="$(docker image inspect "${GAME_BACKEND_IMAGE}:${IMAGE_TAG}" --format '{{.Id}}')"
+                  questions_backend_id="$(docker image inspect "${QUESTIONS_BACKEND_IMAGE}:${IMAGE_TAG}" --format '{{.Id}}')"
+
+                  docker tag "$frontend_id" "${FRONTEND_IMAGE}:latest"
+                  docker tag "$game_backend_id" "${GAME_BACKEND_IMAGE}:latest"
+                  docker tag "$questions_backend_id" "${QUESTIONS_BACKEND_IMAGE}:latest"
+
+                  docker push "${FRONTEND_IMAGE}:latest"
+                  docker push "${GAME_BACKEND_IMAGE}:latest"
+                  docker push "${QUESTIONS_BACKEND_IMAGE}:latest"
+
+    trigger_coolify:
+        name: Trigger Coolify Redeploy
+        needs: build_and_push
+        runs-on: ubuntu-latest
+        steps:
+            - name: Call Coolify webhook
+              env:
+                  COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
+                  COOLIFY_WEBHOOK_TOKEN: ${{ secrets.COOLIFY_WEBHOOK_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  [[ -n "${COOLIFY_WEBHOOK_URL:-}" ]] || { echo "Missing required secret: COOLIFY_WEBHOOK_URL"; exit 1; }
+
+                  if [[ -n "${COOLIFY_WEBHOOK_TOKEN:-}" ]]; then
+                    curl -fsSL -X POST "$COOLIFY_WEBHOOK_URL" \
+                      -H "Authorization: Bearer $COOLIFY_WEBHOOK_TOKEN"
+                  else
+                    curl -fsSL -X POST "$COOLIFY_WEBHOOK_URL"
+                  fi
