@@ -43,14 +43,14 @@ services:
 
     keycloak:
         image: quay.io/keycloak/keycloak:26.2
-        command: ["start", "--import-realm"]
+        command: ["start", "--import-realm --optimized"]
         restart: on-failure:5
         healthcheck:
             test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/account/realms/quiz-rush/.well-known/openid-configuration"]
             interval: 10s
             timeout: 5s
-            retries: 20
-            start_period: 20s
+            retries: 50
+            start_period: 60s
         environment:
             KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
             KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
