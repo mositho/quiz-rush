@@ -40,6 +40,19 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
+    secret_scan:
+        name: Secret Scanning
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+            uses: actions/checkout@v6
+            with:
+                fetch-depth: 0
+
+            - name: Run Gitleaks
+            uses: gitleaks/gitleaks-action@v2
+            env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     frontend:
         name: Frontend Checks
         uses: ./.github/workflows/frontend-ci.yml
