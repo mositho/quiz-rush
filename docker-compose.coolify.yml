@@ -55,7 +55,7 @@ services:
                 ]
             interval: 10s
             timeout: 5s
-            retries: 50
+            retries: 100
             start_period: 10s
         environment:
             KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
