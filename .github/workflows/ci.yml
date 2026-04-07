@@ -45,14 +45,14 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
-            uses: actions/checkout@v6
-            with:
-                fetch-depth: 0
+              uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
 
             - name: Run Gitleaks
-            uses: gitleaks/gitleaks-action@v2
-            env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              uses: gitleaks/gitleaks-action@v2
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     frontend:
         name: Frontend Checks
         uses: ./.github/workflows/frontend-ci.yml
