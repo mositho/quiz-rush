@@ -40,15 +40,6 @@ async function initWithSilentCheckSso() {
   });
 }
 
-async function initWithRedirectCheckSso() {
-  keycloak = createKeycloakInstance();
-  return keycloak.init({
-    onLoad: "check-sso",
-    checkLoginIframe: false,
-    pkceMethod: "S256",
-  });
-}
-
 export async function initKeycloak() {
   if (!initPromise) {
     initPromise = initWithSilentCheckSso()
@@ -56,24 +47,13 @@ export async function initKeycloak() {
         syncAuthState();
         return authenticated;
       })
-      .catch(async (error) => {
+      .catch((error) => {
         console.warn(
-          "Silent Keycloak check-sso failed; retrying with redirect-based session check.",
+          "Silent Keycloak check-sso failed; continuing without an active session.",
           error
         );
-
-        try {
-          const authenticated = await initWithRedirectCheckSso();
-          syncAuthState();
-          return authenticated;
-        } catch (fallbackError) {
-          console.warn(
-            "Keycloak redirect check-sso failed; continuing without an active session.",
-            fallbackError
-          );
-          clearAuthState();
-          return false;
-        }
+        clearAuthState();
+        return false;
       });
   }
 
