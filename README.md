@@ -114,25 +114,25 @@ sequenceDiagram
   Note over CI: Concurrency group cancels older runs<br/>for the same PR/ref
 
   par Secret scan
-    CI->>Scan: Run gitleaks scan
+    CI-->>Scan: Run gitleaks scan
     Scan-->>CI: Scan result
   and Frontend checks
-    CI->>FE: Run frontend checks
+    CI-->>FE: Run frontend checks
     FE->>FE: Install, audit, lint, format check, build
     FE-->>CI: Frontend result
   and Game backend checks
-    CI->>GB: Start game backend workflow
+    CI-->>GB: Start game backend workflow
     GB->>GO: Reuse Go backend pipeline
-    GO->>GO: Format, lint, vuln check, tests, coverage
+    GO-->>GO: Format, lint, vuln check, tests, coverage
     alt Pull request
       GO->>PR: Update coverage comment
     end
     GO-->>GB: Game backend result
     GB-->>CI: Backend result
   and Questions backend checks
-    CI->>QB: Start questions backend workflow
+    CI-->>QB: Start questions backend workflow
     QB->>GO: Reuse Go backend pipeline
-    GO->>GO: Format, lint, vuln check, tests, coverage
+    GO-->>GO: Format, lint, vuln check, tests, coverage
     alt Pull request
       GO->>PR: Update coverage comment
     end
