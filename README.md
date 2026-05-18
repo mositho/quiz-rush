@@ -411,3 +411,4 @@ make dev
 ```
 
 In Bruno, keep `username` and `password` in the selected game-backend environment, or mark them as secrets in Bruno's UI if your installed version supports that. The login request then populates the runtime `accessToken` automatically.
+
